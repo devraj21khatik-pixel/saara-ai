@@ -3,7 +3,7 @@ import re
 import requests
 from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__)
 app.secret_key = "saara_secret_key_123"
 
 # Environment Variable se read karega (GitHub par koi error nahi aayega)
