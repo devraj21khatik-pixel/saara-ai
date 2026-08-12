@@ -2,7 +2,7 @@ import os
 import re
 import requests
 from flask import Flask, render_template, request, jsonify, session
-app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
+app = Flask(__name__, template_folder='.')
 
 app.secret_key = "saara_secret_key_123"
 
