@@ -41,6 +41,44 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
+# --- Audio Support Functions (Raw PCM ko Playable WAV banane ke liye) ---
+
+def pcm_to_wav(pcm_bytes, sample_rate=24000, num_channels=1, bits_per_sample=16):
+    byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
+    block_align = num_channels * (bits_per_sample // 8)
+    data_size = len(pcm_bytes)
+    chunk_size = 36 + data_size
+    
+    header = bytearray()
+    header.extend(b'RIFF')
+    header.extend(chunk_size.to_bytes(4, 'little'))
+    header.extend(b'WAVE')
+    header.extend(b'fmt ')
+    header.extend((16).to_bytes(4, 'little'))
+    header.extend((1).to_bytes(2, 'little'))
+    header.extend(num_channels.to_bytes(2, 'little'))
+    header.extend(sample_rate.to_bytes(4, 'little'))
+    header.extend(byte_rate.to_bytes(4, 'little'))
+    header.extend(block_align.to_bytes(2, 'little'))
+    header.extend(bits_per_sample.to_bytes(2, 'little'))
+    header.extend(b'data')
+    header.extend(data_size.to_bytes(4, 'little'))
+    
+    return bytes(header) + pcm_bytes
+
+def get_fallback_tts(text):
+    try:
+        url = "https://translate.google.com/translate_tts"
+        params = {"ie": "UTF-8", "q": text, "tl": "hi", "client": "tw-ob"}
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, params=params, headers=headers, timeout=6)
+        if res.status_code == 200:
+            audio_b64 = base64.b64encode(res.content).decode("utf-8")
+            return jsonify({"audio": audio_b64, "mimeType": "audio/mp3"})
+    except Exception as e:
+        print(f"⚠️ Fallback TTS Error: {e}")
+    return jsonify({"error": "TTS failed"}), 500
+
 # --- Gemini Official Native Audio TTS Route ---
 
 @app.route("/tts", methods=["POST"])
@@ -56,7 +94,7 @@ def tts():
         return jsonify({"error": "No text provided"}), 400
 
     if not GEMINI_API_KEY:
-        return jsonify({"error": "GEMINI_API_KEY missing"}), 500
+        return get_fallback_tts(text)
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     
@@ -84,15 +122,17 @@ def tts():
             
             inline_data = part.get("inlineData") or part.get("inline_data")
             if inline_data and "data" in inline_data:
-                audio_b64 = inline_data["data"]
-                mime_type = inline_data.get("mimeType", "audio/wav")
-                return jsonify({"audio": audio_b64, "mimeType": mime_type})
+                raw_b64 = inline_data["data"]
+                pcm_bytes = base64.b64decode(raw_b64)
+                wav_bytes = pcm_to_wav(pcm_bytes)
+                audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
+                return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
                 
         print(f"⚠️ Gemini TTS Error Status: {res.status_code}, Response: {res.text}")
-        return jsonify({"error": "Gemini TTS generation failed"}), 500
+        return get_fallback_tts(text)
     except Exception as e:
         print(f"⚠️ Gemini TTS Exception: {e}")
-        return jsonify({"error": str(e)}), 500
+        return get_fallback_tts(text)
 
 # --- LLM Provider Functions ---
 
