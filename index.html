@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saara AI</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js for Code & Markdown Formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        :root {
+            --cyber-pink: #ff007f;
+            --cyber-cyan: #00f3ff;
+            --cyber-purple: #8a2be2;
+            --bg-void: #030014;
+            --glass-card: rgba(13, 10, 31, 0.75);
+            --glass-border: rgba(0, 243, 255, 0.2);
+            --user-gradient: linear-gradient(135deg, #7928ca, #ff0080);
+            --bot-bg: rgba(18, 14, 41, 0.85);
+            --text-main: #f1f5f9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-void);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient Glow Background */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.4;
+            z-index: 0;
+            animation: float 10s infinite alternate ease-in-out;
+        }
+        .orb-1 { width: 300px; height: 300px; background: var(--cyber-pink); top: -40px; left: -40px; }
+        .orb-2 { width: 350px; height: 350px; background: var(--cyber-purple); bottom: -60px; right: -60px; animation-delay: -5s; }
+
+        @keyframes float {
+            0% { transform: translateY(0px) scale(1); }
+            100% { transform: translateY(25px) scale(1.05); }
+        }
+
+        .chat-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 900px;
+            height: 94vh;
+            background: var(--glass-card);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.15);
+            overflow: hidden;
+        }
+
+        /* Header UI */
+        .chat-header {
+            padding: 18px 28px;
+            background: rgba(5, 3, 20, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .saara-avatar {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-pink));
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 22px;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        .brand-text h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            background: linear-gradient(90deg, #ffffff, var(--cyber-cyan), var(--cyber-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: var(--cyber-cyan);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            color: var(--cyber-cyan);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.25s ease;
+        }
+
+        .header-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Messages Area */
+        .messages-box {
+            flex: 1;
+            padding: 24px 28px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .messages-box::-webkit-scrollbar { width: 4px; }
+        .messages-box::-webkit-scrollbar-thumb { 
+            background: linear-gradient(to bottom, var(--cyber-cyan), var(--cyber-pink)); 
+            border-radius: 10px; 
+        }
+
+        .msg-row {
+            display: flex;
+            width: 100%;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-row.user { justify-content: flex-end; }
+        .msg-row.bot { justify-content: flex-start; }
+
+        .msg-bubble {
+            max-width: 82%;
+            padding: 15px 22px;
+            border-radius: 22px;
+            font-size: 14.5px;
+            line-height: 1.6;
+            word-break: break-word;
+            position: relative;
+        }
+
+        .user .msg-bubble {
+            background: var(--user-gradient);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 0 20px rgba(255, 0, 128, 0.2);
+        }
+
+        .bot .msg-bubble {
+            background: var(--bot-bg);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            color: #f1f5f9;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.08);
+        }
+
+        /* Formatting elements inside Bot Bubbles */
+        .bot .msg-bubble pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 12px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .bot .msg-bubble code {
+            font-family: monospace;
+            color: #00f3ff;
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px 28px;
+            background: rgba(5, 3, 20, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            background: rgba(18, 14, 41, 0.8);
+            border: 1px solid rgba(0, 243, 255, 0.25);
+            border-radius: 22px;
+            padding: 8px 12px 8px 20px;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--cyber-pink);
+            box-shadow: 0 0 25px rgba(255, 0, 127, 0.35);
+        }
+
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 15px;
+            resize: none;
+            max-height: 120px;
+            height: 26px;
+        }
+
+        textarea::placeholder { color: #64748b; }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 16px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 17px;
+            transition: all 0.25s ease;
+            flex-shrink: 0;
+        }
+
+        .mic-btn {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            color: var(--cyber-cyan);
+        }
+
+        .mic-btn.listening {
+            background: #ff0055;
+            border-color: #ff0055;
+            color: #fff;
+            animation: radarPulse 1.2s infinite;
+        }
+
+        @keyframes radarPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0.8); }
+            70% { box-shadow: 0 0 0 14px rgba(255, 0, 85, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0); }
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple));
+            box-shadow: 0 4px 20px rgba(0, 243, 255, 0.4);
+            color: #030014;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.08);
+        }
+
+        /* Typing Dots Animation */
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+            padding: 4px 8px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--cyber-cyan);
+            border-radius: 50%;
+            animation: wave 1.2s infinite ease-in-out;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.15s; background: var(--cyber-pink); }
+        .typing-dots span:nth-child(3) { animation-delay: 0.3s; background: var(--cyber-purple); }
+
+        @keyframes wave {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+            30% { transform: translateY(-7px); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+
+    <div class="chat-container">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="brand-box">
+                <div class="saara-avatar"><i class="fa-solid fa-atom"></i></div>
+                <div class="brand-text">
+                    <h2>Saara AI</h2>
+                    <p>// NextGen Neural Core</p>
+                </div>
+            </div>
+            <div class="action-btns">
+                <button class="header-btn" onclick="clearChat()" title="Clear Chat">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+                <button class="header-btn" id="speech-btn" onclick="toggleSpeech()" title="Toggle Speech Output">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Box -->
+        <div class="messages-box" id="chat-box">
+            <div class="msg-row bot">
+                <div class="msg-bubble">Namaste Sir! Main Saara AI hoon. Aap bataiye aaj main aapki kya madad kar sakti hoon?</div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea id="user-input" placeholder="Saara se kuch bhi poochhein..." rows="1"></textarea>
+                <button class="icon-btn mic-btn" id="mic-btn" onclick="startVoiceInput()"><i class="fa-solid fa-microphone"></i></button>
+                <button class="icon-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let speechEnabled = true;
+        let currentAudio = null;
+        let recognition = null;
+        let isListening = false;
+
+        function toggleSpeech() {
+            speechEnabled = !speechEnabled;
+            const btn = document.getElementById('speech-btn');
+            if (speechEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                btn.style.color = '#00f3ff';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                btn.style.color = '#64748b';
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+            }
+        }
+
+        // --- Microsoft Edge TTS Integration (Swara Neural Voice) ---
+        async function speakText(text) {
+            if (!speechEnabled || !text) return;
+
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+
+            let cleanText = text
+                .replace(/<[^>]*>?/gm, '')
+                .replace(/[*_~#`|]/g, '')
+                .trim();
+
+            if (!cleanText) return;
+
+            try {
+                const response = await fetch('/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: cleanText })
+                });
+
+                const data = await response.json();
+                if (data.audio) {
+                    currentAudio = new Audio("data:audio/mp3;base64," + data.audio);
+                    currentAudio.play();
+                }
+            } catch (err) {
+                console.error("Edge TTS error:", err);
+            }
+        }
+
+        // --- 100% Free Browser Speech-To-Text (Google Voice Input) ---
+        function startVoiceInput() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                alert("Aapka browser voice recognition support nahi karta. Chrome browser use karein.");
+                return;
+            }
+
+            const micBtn = document.getElementById('mic-btn');
+
+            if (isListening && recognition) {
+                recognition.stop();
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'hi-IN'; // Hindi & Hinglish Speech Recognition
+            recognition.interimResults = false;
+            recognition.continuous = false;
+
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.classList.add('listening');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('user-input').value = transcript;
+                sendMessage();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                micBtn.classList.remove('listening');
+                isListening = false;
+            };
+
+            recognition.onend = () => {
+                micBtn.classList.remove('listening');
+                isListening = false;
+            };
+
+            recognition.start();
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            // User Message Row
+            chatBox.innerHTML += `
+                <div class="msg-row user">
+                    <div class="msg-bubble">${message}</div>
+                </div>`;
+            inputField.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Bot Typing Indicator Row
+            const botMsgId = 'bot-' + Date.now();
+            chatBox.innerHTML += `
+                <div class="msg-row bot" id="${botMsgId}">
+                    <div class="msg-bubble">
+                        <div class="typing-dots"><span></span><span></span><span></span></div>
+                    </div>
+                </div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                const botBubble = document.getElementById(botMsgId).querySelector('.msg-bubble');
+                
+                if (typeof marked !== 'undefined') {
+                    botBubble.innerHTML = marked.parse(data.reply);
+                } else {
+                    botBubble.innerText = data.reply;
+                }
+
+                speakText(data.reply);
+            } catch (error) {
+                document.getElementById(botMsgId).querySelector('.msg-bubble').innerText = "Server Connection Error!";
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function clearChat() {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = `
+                <div class="msg-row bot">
+                    <div class="msg-bubble">Namaste Sir! Chat clear kar di gayi hai. Aap kya poochna chahte hain?</div>
+                </div>`;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+        }
+
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
