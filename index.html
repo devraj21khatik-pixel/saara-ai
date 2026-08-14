@@ -81,9 +81,9 @@
             overflow: hidden;
         }
 
-        /* Header Layout Fix for All Icons */
+        /* Header Layout */
         .chat-header {
-            padding: 10px 12px;
+            padding: 10px 14px;
             background: rgba(5, 3, 20, 0.85);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
@@ -125,36 +125,16 @@
         .action-btns {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-shrink: 0;
-        }
-
-        .voice-select-box {
-            background: rgba(18, 14, 41, 0.9);
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            color: var(--cyber-cyan);
-            border-radius: 8px;
-            padding: 4px 6px;
-            font-size: 11px;
-            outline: none;
-            cursor: pointer;
-            width: 75px;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .voice-select-box option {
-            background: #0d0a1f;
-            color: #fff;
         }
 
         .header-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(0, 243, 255, 0.3);
             color: var(--cyber-cyan);
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 8px;
             cursor: pointer;
             display: flex;
@@ -352,19 +332,6 @@
                 </div>
             </div>
             <div class="action-btns">
-                <!-- Dropdown Updated with Gemini Live Voices -->
-                <select id="voice-select" class="voice-select-box" title="Select Voice">
-                    <option value="Lyra">Lyra</option>
-                    <option value="Vega">Vega</option>
-                    <option value="Eclipse">Eclipse</option>
-                    <option value="Orbit">Orbit</option>
-                    <option value="Orion">Orion</option>
-                    <option value="Dipper">Dipper</option>
-                    <option value="Capella">Capella</option>
-                    <option value="Pegasus">Pegasus</option>
-                    <option value="Ursa">Ursa</option>
-                </select>
-
                 <!-- Trash Icon -->
                 <button class="header-btn" onclick="clearChat()" title="Clear Chat">
                     <i class="fa-solid fa-trash-can"></i>
@@ -432,15 +399,12 @@
 
             if (!cleanText) return;
 
-            const selectedVoice = document.getElementById('voice-select').value;
-
             try {
                 const response = await fetch('/tts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        text: cleanText,
-                        voice: selectedVoice 
+                        text: cleanText
                     })
                 });
 
@@ -483,8 +447,6 @@
             recognition.onresult = (event) => {
                 let transcript = event.results[0][0].transcript;
                 
-                // Sirf "Saara" naam ke Hindi variations (सारा, सॉरा, sara, sahra) ko replace karega.
-                // "सर" / "सिर" (Sir) ko bilkul touch nahi karega.
                 transcript = transcript.replace(/\b(सारा|सॉरा|सराह|sara|saraa|shara)\b/gi, 'Saara');
 
                 document.getElementById('user-input').value = transcript;
