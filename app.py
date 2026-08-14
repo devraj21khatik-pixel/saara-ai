@@ -13,18 +13,8 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
-# Frontend Voice Names -> Gemini API SDK Voice Mapping
-VOICE_MAP = {
-    "Lyra": "Aoede",
-    "Vega": "Kore",
-    "Eclipse": "Fenrir",
-    "Orbit": "Puck",
-    "Orion": "Charon",
-    "Dipper": "Puck",
-    "Capella": "Aoede",
-    "Pegasus": "Fenrir",
-    "Ursa": "Kore"
-}
+# --- KAGGLE F5-TTS VOICE ENGINE URL ---
+KAGGLE_ENGINE_URL = "https://saara-voice-engine.loca.lt/generate"
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
@@ -41,123 +31,51 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Audio Support Functions (Raw PCM ko Playable WAV banane ke liye) ---
-
-def pcm_to_wav(pcm_bytes, sample_rate=24000, num_channels=1, bits_per_sample=16):
-    byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
-    block_align = num_channels * (bits_per_sample // 8)
-    data_size = len(pcm_bytes)
-    chunk_size = 36 + data_size
-    
-    header = bytearray()
-    header.extend(b'RIFF')
-    header.extend(chunk_size.to_bytes(4, 'little'))
-    header.extend(b'WAVE')
-    header.extend(b'fmt ')
-    header.extend((16).to_bytes(4, 'little'))
-    header.extend((1).to_bytes(2, 'little'))
-    header.extend(num_channels.to_bytes(2, 'little'))
-    header.extend(sample_rate.to_bytes(4, 'little'))
-    header.extend(byte_rate.to_bytes(4, 'little'))
-    header.extend(block_align.to_bytes(2, 'little'))
-    header.extend(bits_per_sample.to_bytes(2, 'little'))
-    header.extend(b'data')
-    header.extend(data_size.to_bytes(4, 'little'))
-    
-    return bytes(header) + pcm_bytes
-
-def get_fallback_tts(text):
-    try:
-        url = "https://translate.google.com/translate_tts"
-        params = {"ie": "UTF-8", "q": text, "tl": "hi", "client": "tw-ob"}
-        headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(url, params=params, headers=headers, timeout=6)
-        if res.status_code == 200:
-            audio_b64 = base64.b64encode(res.content).decode("utf-8")
-            return jsonify({"audio": audio_b64, "mimeType": "audio/mp3"})
-    except Exception as e:
-        print(f"⚠️ Fallback TTS Error: {e}")
-    return jsonify({"error": "TTS failed"}), 500
-
-# --- Gemini Official Native Audio TTS Route ---
+# --- Kaggle F5-TTS Cloned Voice TTS Route ---
 
 @app.route("/tts", methods=["POST"])
 def tts():
     data = request.json or {}
     text = clean_text(data.get("text", ""))
     
-    # Frontend se aane waale voice name ko Map karna
-    requested_voice = data.get("voice", "Lyra")
-    voice_name = VOICE_MAP.get(requested_voice, "Aoede")
-
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    if not GEMINI_API_KEY:
-        return get_fallback_tts(text)
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-    
-    payload = {
-        "contents": [{"parts": [{"text": f"Read this aloud in a natural, expressive human voice: {text}"}]}],
-        "generationConfig": {
-            "responseModalities": ["AUDIO"],
-            "speechConfig": {
-                "voiceConfig": {
-                    "prebuiltVoiceConfig": {
-                        "voiceName": voice_name
-                    }
-                }
-            }
-        }
-    }
-
-    headers = {"Content-Type": "application/json"}
-
     try:
-        res = requests.post(url, headers=headers, json=payload, timeout=12)
-        if res.status_code == 200:
-            res_data = res.json()
-            part = res_data["candidates"][0]["content"]["parts"][0]
+        print("⚡ Sending text to Kaggle F5-TTS Engine...")
+        response = requests.post(
+            KAGGLE_ENGINE_URL,
+            json={"text": text},
+            headers={"Bypass-Tunnel-Reminder": "true"},
+            timeout=25
+        )
+        
+        if response.status_code == 200:
+            audio_b64 = base64.b64encode(response.content).decode("utf-8")
+            print("✅ Voice successfully generated via Kaggle F5-TTS!")
+            return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
+        else:
+            print(f"⚠️ Kaggle Engine Error Status: {response.status_code}")
+            return jsonify({"error": "Kaggle engine failed"}), 500
             
-            inline_data = part.get("inlineData") or part.get("inline_data")
-            if inline_data and "data" in inline_data:
-                raw_b64 = inline_data["data"]
-                pcm_bytes = base64.b64decode(raw_b64)
-                wav_bytes = pcm_to_wav(pcm_bytes)
-                audio_b64 = base64.b64encode(wav_bytes).decode("utf-8")
-                return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
-                
-        print(f"⚠️ Gemini TTS Error Status: {res.status_code}, Response: {res.text}")
-        return get_fallback_tts(text)
     except Exception as e:
-        print(f"⚠️ Gemini TTS Exception: {e}")
-        return get_fallback_tts(text)
+        print(f"⚠️ Kaggle Engine Connection Exception: {e}")
+        return jsonify({"error": "Voice engine unreachable"}), 500
 
 # --- LLM Provider Functions ---
 
 def call_gemini(history):
     gemini_models = [
-        # --- 3.x Series Models ---
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
         "gemini-3-flash-preview",
-        
-        # --- 2.5 Series Models ---
         "gemini-2.5-flash-lite",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
-        "gemini-2.5-flash-lite-preview-09-2025",
-        
-        # --- Gemma 4 Models ---
         "gemma-4-31b-it",
         "gemma-4-26b-it",
-        "gemma-4-31b",
-        "gemma-4-26b",
-        
-        # --- Stable Backup Models ---
         "gemini-2.0-flash",
         "gemini-1.5-flash"
     ]
@@ -188,8 +106,6 @@ def call_gemini(history):
             if res.status_code == 200:
                 print(f"✅ Success with Model: [{model}]")
                 return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-            else:
-                print(f"⚠️ [{model}] Status {res.status_code}. Trying next model...")
         except Exception:
             continue
 
