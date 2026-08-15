@@ -7,13 +7,13 @@ from flask import Flask, render_template, request, jsonify, session
 app = Flask(__name__, template_folder='.')
 app.secret_key = "saara_secret_key_123"
 
-# Environment Variables Read Karna
+# --- LLM Environment Variables ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
-# Professional TTS API Keys
+# --- Professional TTS Environment Variables ---
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY", "")
@@ -34,39 +34,14 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Professional Multi-Provider TTS Functions (with Fallback) ---
-
-def call_sarvam_tts(text):
-    if not SARVAM_API_KEY:
-        raise Exception("Sarvam API key missing")
-    
-    url = "https://api.sarvam.ai/text-to-speech"
-    headers = {
-        "api-subscription-key": SARVAM_API_KEY,
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "inputs": [text],
-        "target_language_code": "hi-IN",
-        "speaker": "meera", # Best expressive female voice profile
-        "model": "bulbul:v1",
-        "pace": 1.0,
-        "speech_sample_rate": 22050,
-        "enable_preprocessing": True
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        data = res.json()
-        if "audios" in data and len(data["audios"]) > 0:
-            return data["audios"][0]
-    raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
+# --- Multi-Provider TTS Functions (Primary: ElevenLabs, Fallback: Sarvam AI) ---
 
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
         raise Exception("ElevenLabs API key missing")
     
-    voice_id = "21m00Tcm4TlvDq8ikWAM" # Standard natural female voice ID
+    # Pre-made voice ID
+    voice_id = "21m00Tcm4TlvDq8ikWAM" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
         "xi-api-key": ELEVENLABS_API_KEY,
@@ -88,6 +63,32 @@ def call_elevenlabs_tts(text):
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"ElevenLabs Status {res.status_code}: {res.text}")
 
+def call_sarvam_tts(text):
+    if not SARVAM_API_KEY:
+        raise Exception("Sarvam API key missing")
+    
+    url = "https://api.sarvam.ai/text-to-speech"
+    headers = {
+        "api-subscription-key": SARVAM_API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": [text],
+        "target_language_code": "hi-IN",
+        "speaker": "anushka", # Fixed: Valid expressive speaker name
+        "model": "bulbul:v1",
+        "pace": 1.0,
+        "speech_sample_rate": 22050,
+        "enable_preprocessing": True
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        data = res.json()
+        if "audios" in data and len(data["audios"]) > 0:
+            return data["audios"][0]
+    raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
+
 def call_cartesia_tts(text):
     if not CARTESIA_API_KEY:
         raise Exception("Cartesia API key missing")
@@ -103,7 +104,7 @@ def call_cartesia_tts(text):
         "transcript": text,
         "voice": {
             "mode": "id",
-            "id": "a0e99841-438c-4a64-b679-ae501e7d6091" # High quality female voice sample ID
+            "id": "a0e99841-438c-4a64-b679-ae501e7d6091"
         },
         "output_format": {
             "container": "wav",
@@ -135,7 +136,7 @@ def call_deepgram_tts(text):
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
 
-# --- TTS Route with Multi-Provider Fallback ---
+# --- TTS Route with Fallback Hierarchy ---
 
 @app.route("/tts", methods=["POST"])
 def tts():
@@ -146,10 +147,10 @@ def tts():
         return jsonify({"error": "No text provided"}), 400
 
     tts_providers = [
-        ("Sarvam AI (Bulbul)", call_sarvam_tts),
-        ("ElevenLabs", call_elevenlabs_tts),
-        ("Cartesia", call_cartesia_tts),
-        ("Deepgram", call_deepgram_tts)
+        ("ElevenLabs", call_elevenlabs_tts),       # Priority 1
+        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback)
+        ("Cartesia", call_cartesia_tts),           # Priority 3
+        ("Deepgram", call_deepgram_tts)            # Priority 4
     ]
 
     for name, func in tts_providers:
