@@ -34,7 +34,7 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Multi-Provider TTS Functions (Primary: ElevenLabs, Fallback: Sarvam AI v3) ---
+# --- Multi-Provider TTS Functions ---
 
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
@@ -99,7 +99,7 @@ def call_cartesia_tts(text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model_id": "sonic", # Fixed sunsetted model error
+        "model_id": "sonic-multilingual", # FIXED: Updated to current active model
         "transcript": text,
         "voice": {
             "mode": "id",
@@ -146,10 +146,10 @@ def tts():
         return jsonify({"error": "No text provided"}}, 400
 
     tts_providers = [
-        ("ElevenLabs", call_elevenlabs_tts),       # Priority 1
-        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback with female voice 'simran')
-        ("Cartesia", call_cartesia_tts),           # Priority 3
-        ("Deepgram", call_deepgram_tts)            # Priority 4
+        ("ElevenLabs", call_elevenlabs_tts),       
+        ("Sarvam AI (Bulbul)", call_sarvam_tts),   
+        ("Cartesia", call_cartesia_tts),           
+        ("Deepgram", call_deepgram_tts)            
     ]
 
     for name, func in tts_providers:
