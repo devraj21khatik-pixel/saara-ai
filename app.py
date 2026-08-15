@@ -1,8 +1,10 @@
 import os
 import re
 import base64
+import io
 import requests
 from flask import Flask, render_template, request, jsonify, session
+from gtts import gTTS
 
 app = Flask(__name__, template_folder='.')
 application = app  # Vercel compatibility ke liye zaroori alias
@@ -16,9 +18,9 @@ BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
 # --- Professional TTS Environment Variables ---
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY", "")
-DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
@@ -36,24 +38,6 @@ def clean_text(text):
     return text.strip()
 
 # --- Multi-Provider TTS Functions ---
-
-def call_deepgram_tts(text):
-    if not DEEPGRAM_API_KEY:
-        raise Exception("Deepgram API key missing")
-        
-    url = "https://api.deepgram.com/v1/speak?model=flux-priya-en"
-    headers = {
-        "Authorization": f"Token {DEEPGRAM_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "text": text
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        return base64.b64encode(res.content).decode('utf-8')
-    raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
 
 def call_sarvam_tts(text):
     if not SARVAM_API_KEY:
@@ -80,6 +64,34 @@ def call_sarvam_tts(text):
         if "audios" in data and len(data["audios"]) > 0:
             return data["audios"][0]
     raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
+
+def call_deepgram_tts(text):
+    if not DEEPGRAM_API_KEY:
+        raise Exception("Deepgram API key missing")
+        
+    url = "https://api.deepgram.com/v1/speak?model=flux-priya-en"
+    headers = {
+        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": text
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        return base64.b64encode(res.content).decode('utf-8')
+    raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
+
+def call_google_tts(text):
+    try:
+        tts = gTTS(text=text, lang='hi', slow=False)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        return base64.b64encode(fp.read()).decode('utf-8')
+    except Exception as e:
+        raise Exception(f"Google TTS Error: {e}")
 
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
@@ -143,11 +155,12 @@ def tts():
     text = clean_text(data.get("text", ""))
     
     if not text:
-        return jsonify({"error": "No text provided"}}, 400
+        return jsonify({"error": "No text provided"}), 400
 
     tts_providers = [
-        ("Deepgram (Priya)", call_deepgram_tts),   
         ("Sarvam AI (Bulbul)", call_sarvam_tts),   
+        ("Deepgram (Priya)", call_deepgram_tts),   
+        ("Google TTS", call_google_tts),           
         ("ElevenLabs", call_elevenlabs_tts),       
         ("Cartesia", call_cartesia_tts)            
     ]
