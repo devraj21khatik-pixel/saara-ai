@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saara AI</title>
+    <title>Saara Live AI</title>
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Marked.js for Code & Markdown Formatting -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
@@ -16,7 +15,7 @@
             --cyber-cyan: #00f3ff;
             --cyber-purple: #8a2be2;
             --bg-void: #030014;
-            --glass-card: rgba(13, 10, 31, 0.75);
+            --glass-card: rgba(13, 10, 31, 0.85);
             --glass-border: rgba(0, 243, 255, 0.2);
             --user-gradient: linear-gradient(135deg, #7928ca, #ff0080);
             --bot-bg: rgba(18, 14, 41, 0.85);
@@ -142,6 +141,7 @@
             justify-content: center;
             font-size: 13px;
             flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
         .header-btn:hover {
@@ -204,18 +204,128 @@
             box-shadow: 0 0 12px rgba(0, 243, 255, 0.08);
         }
 
-        .bot .msg-bubble pre {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 8px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 6px 0;
-            border: 1px solid rgba(0, 243, 255, 0.2);
+        /* Gemini Live Overlay Modal */
+        #live-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 0, 20, 0.92);
+            backdrop-filter: blur(25px);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
         }
 
-        .bot .msg-bubble code {
-            font-family: monospace;
-            color: #00f3ff;
+        .live-orb-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .live-pulse-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-pink));
+            opacity: 0.4;
+            animation: pulseRing 2s infinite ease-out;
+        }
+
+        .live-pulse-ring:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .live-core-btn {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple));
+            border-radius: 50%;
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 30px var(--cyber-cyan);
+            z-index: 10;
+        }
+
+        /* Waveform Bars (Gemini Live Style) */
+        .waveform-bars {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 40px;
+            margin: 20px 0;
+        }
+
+        .waveform-bars span {
+            width: 5px;
+            height: 10px;
+            background: var(--cyber-cyan);
+            border-radius: 3px;
+            animation: waveBounce 1.2s infinite ease-in-out;
+        }
+
+        .waveform-bars span:nth-child(2) { animation-delay: 0.1s; background: var(--cyber-pink); }
+        .waveform-bars span:nth-child(3) { animation-delay: 0.2s; background: var(--cyber-purple); height: 25px; }
+        .waveform-bars span:nth-child(4) { animation-delay: 0.3s; background: var(--cyber-cyan); height: 35px; }
+        .waveform-bars span:nth-child(5) { animation-delay: 0.4s; background: var(--cyber-pink); }
+
+        @keyframes waveBounce {
+            0%, 100% { height: 10px; opacity: 0.4; }
+            50% { height: 45px; opacity: 1; }
+        }
+
+        .live-status-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: var(--cyber-cyan);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .live-transcript {
+            font-size: 15px;
+            color: #cbd5e1;
+            max-width: 500px;
+            min-height: 50px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .close-live-btn {
+            background: rgba(255, 0, 85, 0.2);
+            border: 1px solid #ff0055;
+            color: #ff0055;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .close-live-btn:hover {
+            background: #ff0055;
+            color: #fff;
         }
 
         /* Input Area */
@@ -235,11 +345,6 @@
             gap: 6px;
         }
 
-        .input-wrapper:focus-within {
-            border-color: var(--cyber-pink);
-            box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
-        }
-
         textarea {
             width: 100%;
             background: transparent;
@@ -255,7 +360,7 @@
             display: block;
         }
 
-        textarea::placeholder { color: #64748b; line-height: 24px; }
+        textarea::placeholder { color: #64748b; }
 
         .icon-btn {
             width: 36px;
@@ -277,43 +382,9 @@
             color: var(--cyber-cyan);
         }
 
-        .mic-btn.listening {
-            background: #ff0055;
-            border-color: #ff0055;
-            color: #fff;
-            animation: radarPulse 1.2s infinite;
-        }
-
-        @keyframes radarPulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0.8); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 0, 85, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0); }
-        }
-
         .send-btn {
             background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple));
             color: #030014;
-        }
-
-        .typing-dots {
-            display: flex;
-            gap: 6px;
-            padding: 4px 8px;
-        }
-
-        .typing-dots span {
-            width: 8px;
-            height: 8px;
-            background: var(--cyber-cyan);
-            border-radius: 50%;
-            animation: wave 1.2s infinite ease-in-out;
-        }
-        .typing-dots span:nth-child(2) { animation-delay: 0.15s; background: var(--cyber-pink); }
-        .typing-dots span:nth-child(3) { animation-delay: 0.3s; background: var(--cyber-purple); }
-
-        @keyframes wave {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
-            30% { transform: translateY(-7px); opacity: 1; }
         }
     </style>
 </head>
@@ -321,6 +392,24 @@
 
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
+
+    <!-- Gemini Live Fullscreen Style Overlay -->
+    <div id="live-overlay">
+        <div class="live-orb-container">
+            <div class="live-pulse-ring"></div>
+            <div class="live-pulse-ring"></div>
+            <button class="live-core-btn" id="live-core-icon"><i class="fa-solid fa-microphone"></i></button>
+        </div>
+        <div class="live-status-text" id="live-status-label">Saara is listening...</div>
+        
+        <!-- Animated Waveform Bars (Gemini Live Vibe) -->
+        <div class="waveform-bars" id="waveform-visual">
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
+
+        <div class="live-transcript" id="live-transcript-box">Aap boliye sir, main sun rahi hoon...</div>
+        <button class="close-live-btn" onclick="toggleSaaraLive()">Exit Live Mode</button>
+    </div>
 
     <div class="chat-container">
         <!-- Header -->
@@ -332,12 +421,13 @@
                 </div>
             </div>
             <div class="action-btns">
-                <!-- Trash Icon -->
+                <!-- Gemini Live Launch Button -->
+                <button class="header-btn" onclick="toggleSaaraLive()" title="Launch Gemini Live Mode" style="background: rgba(255,0,127,0.2); border-color: var(--cyber-pink); color: var(--cyber-pink);">
+                    <i class="fa-solid fa-podcast"></i>
+                </button>
                 <button class="header-btn" onclick="clearChat()" title="Clear Chat">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
-
-                <!-- Speaker Volume Icon -->
                 <button class="header-btn" id="speech-btn" onclick="toggleSpeech()" title="Toggle Speech">
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
@@ -347,7 +437,7 @@
         <!-- Chat Box -->
         <div class="messages-box" id="chat-box">
             <div class="msg-row bot">
-                <div class="msg-bubble">Namaste Sir! Main Saara AI hoon. Aap bataiye aaj main aapki kya madad kar sakti hoon?</div>
+                <div class="msg-bubble">Namaste Sir! Upar diye gaye podcast/live button par click karke aap **Gemini Live Mode** shuru kar sakte hain!</div>
             </div>
         </div>
 
@@ -364,6 +454,7 @@
     <!-- JavaScript -->
     <script>
         let speechEnabled = true;
+        let isLiveActive = false;
         let currentAudio = null;
         let recognition = null;
         let isListening = false;
@@ -377,117 +468,78 @@
             } else {
                 btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
                 btn.style.color = '#64748b';
-                if (currentAudio) {
-                    currentAudio.pause();
-                    currentAudio = null;
-                }
+                if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             }
         }
 
-        async function speakText(text) {
-            if (!speechEnabled || !text) return;
-
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
+        function toggleSaaraLive() {
+            isLiveActive = !isLiveActive;
+            const overlay = document.getElementById('live-overlay');
+            
+            if (isLiveActive) {
+                overlay.style.display = 'flex';
+                startLiveListening();
+            } else {
+                overlay.style.display = 'none';
+                if (recognition && isListening) { recognition.stop(); }
+                if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             }
+        }
 
-            let cleanText = text
-                .replace(/<[^>]*>?/gm, '')
-                .replace(/[*_~#`|]/g, '')
-                .trim();
+        function updateLiveUI(status, text, iconClass, showWave) {
+            document.getElementById('live-status-label').innerText = status;
+            document.getElementById('live-transcript-box').innerText = text;
+            document.getElementById('live-core-icon').innerHTML = `<i class="${iconClass}"></i>`;
+            document.getElementById('waveform-visual').style.display = showWave ? 'flex' : 'none';
+        }
 
-            if (!cleanText) return;
+        function startLiveListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Browser voice recognition support nahi karta!");
+                return;
+            }
 
             try {
-                const response = await fetch('/tts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        text: cleanText
-                    })
-                });
+                recognition = new SpeechRecognition();
+                recognition.lang = 'hi-IN';
+                recognition.interimResults = false;
+                recognition.continuous = false;
 
-                const data = await response.json();
-                if (data.audio) {
-                    const mime = data.mimeType || 'audio/wav';
-                    currentAudio = new Audio(`data:${mime};base64,${data.audio}`);
-                    currentAudio.play();
-                }
-            } catch (err) {
-                console.error("TTS error:", err);
+                recognition.onstart = () => {
+                    isListening = true;
+                    updateLiveUI("Saara is listening...", "Aap boliye sir, main sun rahi hoon...", "fa-solid fa-microphone", true);
+                };
+
+                recognition.onresult = (event) => {
+                    let transcript = event.results[0][0].transcript;
+                    transcript = transcript.replace(/\b(सारा|सॉरा|सराह|sara|saraa|shara)\b/gi, 'Saara');
+                    
+                    updateLiveUI("Processing...", `Sir: "${transcript}"`, "fa-solid fa-spinner fa-spin", false);
+                    sendLiveMessage(transcript);
+                };
+
+                recognition.onerror = () => {
+                    isListening = false;
+                    if (isLiveActive) {
+                        setTimeout(() => { if (isLiveActive) startLiveListening(); }, 1000);
+                    }
+                };
+
+                recognition.onend = () => { isListening = false; };
+                recognition.start();
+            } catch (e) {
+                isListening = false;
             }
         }
 
-        function startVoiceInput() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            
-            if (!SpeechRecognition) {
-                alert("Aapka browser voice recognition support nahi karta. Chrome use karein.");
-                return;
-            }
-
-            const micBtn = document.getElementById('mic-btn');
-
-            if (isListening && recognition) {
-                recognition.stop();
-                return;
-            }
-
-            recognition = new SpeechRecognition();
-            recognition.lang = 'hi-IN';
-            recognition.interimResults = false;
-            recognition.continuous = false;
-
-            recognition.onstart = () => {
-                isListening = true;
-                micBtn.classList.add('listening');
-            };
-
-            recognition.onresult = (event) => {
-                let transcript = event.results[0][0].transcript;
-                
-                transcript = transcript.replace(/\b(सारा|सॉरा|सराह|sara|saraa|shara)\b/gi, 'Saara');
-
-                document.getElementById('user-input').value = transcript;
-                sendMessage();
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech Recognition Error:", event.error);
-                micBtn.classList.remove('listening');
-                isListening = false;
-            };
-
-            recognition.onend = () => {
-                micBtn.classList.remove('listening');
-                isListening = false;
-            };
-
-            recognition.start();
-        }
-
-        async function sendMessage() {
-            const inputField = document.getElementById('user-input');
+        async function sendLiveMessage(message) {
+            // Chat history me bhi add kar do
             const chatBox = document.getElementById('chat-box');
-            const message = inputField.value.trim();
-            if (!message) return;
-
-            chatBox.innerHTML += `
-                <div class="msg-row user">
-                    <div class="msg-bubble">${message}</div>
-                </div>`;
-            inputField.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
-
+            chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
+            
             const botMsgId = 'bot-' + Date.now();
-            chatBox.innerHTML += `
-                <div class="msg-row bot" id="${botMsgId}">
-                    <div class="msg-bubble">
-                        <div class="typing-dots"><span></span><span></span><span></span></div>
-                    </div>
-                </div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
+            chatBox.innerHTML += `<div class="msg-row bot" id="${botMsgId}"><div class="msg-bubble">...</div></div>`;
 
             try {
                 const response = await fetch('/chat', {
@@ -497,39 +549,33 @@
                 });
 
                 const data = await response.json();
-                const botBubble = document.getElementById(botMsgId).querySelector('.msg-bubble');
-                
-                if (typeof marked !== 'undefined') {
-                    botBubble.innerHTML = marked.parse(data.reply);
+                document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
+
+                // Play Audio & Update Live UI to "Speaking"
+                if (speechEnabled && data.audio) {
+                    updateLiveUI("Saara is speaking...", data.reply, "fa-solid fa-volume-high", true);
+                    
+                    currentAudio = new Audio(`data:${data.mimeType || 'audio/wav'};base64,${data.audio}`);
+                    currentAudio.play();
+
+                    currentAudio.onended = () => {
+                        if (isLiveActive) {
+                            startLiveListening(); // Dubara sunna shuru
+                        }
+                    };
                 } else {
-                    botBubble.innerText = data.reply;
+                    if (isLiveActive) startLiveListening();
                 }
-
-                speakText(data.reply);
-            } catch (error) {
-                document.getElementById(botMsgId).querySelector('.msg-bubble').innerText = "Server Connection Error!";
-            }
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function clearChat() {
-            const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = `
-                <div class="msg-row bot">
-                    <div class="msg-bubble">Namaste Sir! Chat clear kar di gayi hai. Aap kya poochna chahte hain?</div>
-                </div>`;
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
+            } catch (err) {
+                updateLiveUI("Connection Error", "Network issue ho gaya sir.", "fa-solid fa-triangle-exclamation", false);
+                if (isLiveActive) setTimeout(() => startLiveListening(), 2000);
             }
         }
 
-        document.getElementById('user-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-    </script>
-</body>
-</html>
+        function startVoiceInput() {
+            // Normal chat mic button
+            toggleSaaraLive(); // Direct Live mode open kar dega fast experience ke liye
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElement
