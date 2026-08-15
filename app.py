@@ -37,11 +37,54 @@ def clean_text(text):
 
 # --- Multi-Provider TTS Functions ---
 
+def call_deepgram_tts(text):
+    if not DEEPGRAM_API_KEY:
+        raise Exception("Deepgram API key missing")
+        
+    url = "https://api.deepgram.com/v1/speak?model=flux-priya-en"
+    headers = {
+        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": text
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        return base64.b64encode(res.content).decode('utf-8')
+    raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
+
+def call_sarvam_tts(text):
+    if not SARVAM_API_KEY:
+        raise Exception("Sarvam API key missing")
+    
+    url = "https://api.sarvam.ai/text-to-speech"
+    headers = {
+        "api-subscription-key": SARVAM_API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": [text],
+        "target_language_code": "hi-IN",
+        "speaker": "simran", 
+        "model": "bulbul:v3",
+        "pace": 1.0,
+        "speech_sample_rate": 22050,
+        "enable_preprocessing": True
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        data = res.json()
+        if "audios" in data and len(data["audios"]) > 0:
+            return data["audios"][0]
+    raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
+
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
         raise Exception("ElevenLabs API key missing")
     
-    # Free tier API compatible female voice ID (Domi)
     voice_id = "AZnzlk1XvdvUeBnXmlld" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -63,33 +106,6 @@ def call_elevenlabs_tts(text):
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"ElevenLabs Status {res.status_code}: {res.text}")
 
-
-def call_sarvam_tts(text):
-    if not SARVAM_API_KEY:
-        raise Exception("Sarvam API key missing")
-    
-    url = "https://api.sarvam.ai/text-to-speech"
-    headers = {
-        "api-subscription-key": SARVAM_API_KEY,
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "inputs": [text],
-        "target_language_code": "hi-IN",
-        "speaker": "simran", # Valid bulbul:v3 compatible female speaker
-        "model": "bulbul:v3",
-        "pace": 1.0,
-        "speech_sample_rate": 22050,
-        "enable_preprocessing": True
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        data = res.json()
-        if "audios" in data and len(data["audios"]) > 0:
-            return data["audios"][0]
-    raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
-
 def call_cartesia_tts(text):
     if not CARTESIA_API_KEY:
         raise Exception("Cartesia API key missing")
@@ -101,7 +117,7 @@ def call_cartesia_tts(text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model_id": "sonic-multilingual", # FIXED: Updated to current active model
+        "model_id": "sonic-multilingual",
         "transcript": text,
         "voice": {
             "mode": "id",
@@ -119,24 +135,6 @@ def call_cartesia_tts(text):
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"Cartesia Status {res.status_code}: {res.text}")
 
-def call_deepgram_tts(text):
-    if not DEEPGRAM_API_KEY:
-        raise Exception("Deepgram API key missing")
-        
-    url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en"
-    headers = {
-        "Authorization": f"Token {DEEPGRAM_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "text": text
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        return base64.b64encode(res.content).decode('utf-8')
-    raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
-
 # --- TTS Route with Fallback Hierarchy ---
 
 @app.route("/tts", methods=["POST"])
@@ -145,13 +143,13 @@ def tts():
     text = clean_text(data.get("text", ""))
     
     if not text:
-        return jsonify({"error": "No text provided"}), 400
+        return jsonify({"error": "No text provided"}}, 400
 
     tts_providers = [
-        ("ElevenLabs", call_elevenlabs_tts),       
+        ("Deepgram (Priya)", call_deepgram_tts),   
         ("Sarvam AI (Bulbul)", call_sarvam_tts),   
-        ("Cartesia", call_cartesia_tts),           
-        ("Deepgram", call_deepgram_tts)            
+        ("ElevenLabs", call_elevenlabs_tts),       
+        ("Cartesia", call_cartesia_tts)            
     ]
 
     for name, func in tts_providers:
