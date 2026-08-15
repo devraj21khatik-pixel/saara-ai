@@ -5,6 +5,7 @@ import requests
 from flask import Flask, render_template, request, jsonify, session
 
 app = Flask(__name__, template_folder='.')
+application = app  # Vercel compatibility ke liye zaroori alias
 app.secret_key = "saara_secret_key_123"
 
 # --- LLM Environment Variables ---
@@ -143,7 +144,7 @@ def tts():
     text = clean_text(data.get("text", ""))
     
     if not text:
-        return jsonify({"error": "No text provided"}}, 400
+        return jsonify({"error": "No text provided"}), 400
 
     tts_providers = [
         ("ElevenLabs", call_elevenlabs_tts),       
@@ -206,8 +207,10 @@ def call_gemini(history):
         try:
             res = requests.post(url, headers=headers, json=payload, timeout=8)
             if res.status_code == 200:
-                print(f"✅ Success with Model: [{model}]")
-                return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                data = res.json()
+                if "candidates" in data and len(data["candidates"]) > 0:
+                    print(f"✅ Success with Model: [{model}]")
+                    return data["candidates"][0]["content"]["parts"][0]["text"]
         except Exception:
             continue
 
