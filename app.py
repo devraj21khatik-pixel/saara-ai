@@ -74,7 +74,7 @@ def call_sarvam_tts(text):
     payload = {
         "inputs": [text],
         "target_language_code": "hi-IN",
-        "speaker": "simran", # FIXED: Valid bulbul:v3 compatible female speaker
+        "speaker": "simran", # Valid bulbul:v3 compatible female speaker
         "model": "bulbul:v3",
         "pace": 1.0,
         "speech_sample_rate": 22050,
@@ -99,7 +99,7 @@ def call_cartesia_tts(text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model_id": "sonic-english",
+        "model_id": "sonic", # Fixed sunsetted model error
         "transcript": text,
         "voice": {
             "mode": "id",
@@ -147,7 +147,7 @@ def tts():
 
     tts_providers = [
         ("ElevenLabs", call_elevenlabs_tts),       # Priority 1
-        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback - Now 100% working!)
+        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback with female voice 'simran')
         ("Cartesia", call_cartesia_tts),           # Priority 3
         ("Deepgram", call_deepgram_tts)            # Priority 4
     ]
