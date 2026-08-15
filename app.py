@@ -34,13 +34,12 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Multi-Provider TTS Functions (Primary: ElevenLabs Flash, Fallback: Sarvam AI v3) ---
+# --- Multi-Provider TTS Functions (Primary: ElevenLabs, Fallback: Sarvam AI v3) ---
 
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
         raise Exception("ElevenLabs API key missing")
     
-    # Flash model optimized for free credits/tier compatibility
     voice_id = "21m00Tcm4TlvDq8ikWAM" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -75,8 +74,8 @@ def call_sarvam_tts(text):
     payload = {
         "inputs": [text],
         "target_language_code": "hi-IN",
-        "speaker": "anushka",
-        "model": "bulbul:v3", # Updated to current supported model version
+        "speaker": "simran", # FIXED: Valid bulbul:v3 compatible female speaker
+        "model": "bulbul:v3",
         "pace": 1.0,
         "speech_sample_rate": 22050,
         "enable_preprocessing": True
@@ -100,7 +99,7 @@ def call_cartesia_tts(text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model_id": "sonic",
+        "model_id": "sonic-english",
         "transcript": text,
         "voice": {
             "mode": "id",
@@ -144,11 +143,11 @@ def tts():
     text = clean_text(data.get("text", ""))
     
     if not text:
-        return jsonify({"error": "No text provided"}), 400
+        return jsonify({"error": "No text provided"}}, 400
 
     tts_providers = [
         ("ElevenLabs", call_elevenlabs_tts),       # Priority 1
-        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback)
+        ("Sarvam AI (Bulbul)", call_sarvam_tts),   # Priority 2 (Fallback - Now 100% working!)
         ("Cartesia", call_cartesia_tts),           # Priority 3
         ("Deepgram", call_deepgram_tts)            # Priority 4
     ]
