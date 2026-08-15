@@ -41,7 +41,8 @@ def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
         raise Exception("ElevenLabs API key missing")
     
-    voice_id = "21m00Tcm4TlvDq8ikWAM" 
+    # Free tier API compatible female voice ID (Domi)
+    voice_id = "AZnzlk1XvdvUeBnXmlld" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
         "xi-api-key": ELEVENLABS_API_KEY,
@@ -50,11 +51,10 @@ def call_elevenlabs_tts(text):
     }
     payload = {
         "text": text,
-        "model_id": "eleven_flash_v2_5",
+        "model_id": "eleven_multilingual_v2",
         "voice_settings": {
-            "stability": 0.45,
-            "similarity_boost": 0.8,
-            "style": 0.2
+            "stability": 0.5,
+            "similarity_boost": 0.75
         }
     }
     
@@ -62,6 +62,7 @@ def call_elevenlabs_tts(text):
     if res.status_code == 200:
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"ElevenLabs Status {res.status_code}: {res.text}")
+
 
 def call_sarvam_tts(text):
     if not SARVAM_API_KEY:
