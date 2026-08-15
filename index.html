@@ -145,9 +145,7 @@
             transition: all 0.3s ease;
         }
 
-        .header-btn:active {
-            transform: scale(0.92);
-        }
+        .header-btn:active { transform: scale(0.92); }
 
         /* Messages Area */
         .messages-box {
@@ -225,12 +223,12 @@
 
         .live-orb-container {
             position: relative;
-            width: 140px;
-            height: 140px;
+            width: 130px;
+            height: 130px;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .live-pulse-ring {
@@ -243,9 +241,7 @@
             animation: pulseRing 2s infinite ease-out;
         }
 
-        .live-pulse-ring:nth-child(2) {
-            animation-delay: 1s;
-        }
+        .live-pulse-ring:nth-child(2) { animation-delay: 1s; }
 
         @keyframes pulseRing {
             0% { transform: scale(1); opacity: 0.8; }
@@ -254,13 +250,13 @@
 
         .live-core-btn {
             position: relative;
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple));
             border-radius: 50%;
             border: none;
             color: #fff;
-            font-size: 28px;
+            font-size: 24px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -269,12 +265,23 @@
             z-index: 10;
         }
 
+        #screen-preview {
+            width: 220px;
+            height: 125px;
+            border-radius: 12px;
+            border: 2px solid var(--cyber-cyan);
+            object-fit: cover;
+            margin-bottom: 15px;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
         .waveform-bars {
             display: flex;
             align-items: center;
             gap: 6px;
-            height: 40px;
-            margin: 20px 0;
+            height: 35px;
+            margin: 15px 0;
         }
 
         .waveform-bars span {
@@ -297,36 +304,60 @@
 
         .live-status-text {
             font-family: 'Orbitron', sans-serif;
-            font-size: 16px;
+            font-size: 15px;
             color: var(--cyber-cyan);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             letter-spacing: 1px;
         }
 
         .live-transcript {
-            font-size: 15px;
+            font-size: 14px;
             color: #cbd5e1;
             max-width: 500px;
-            min-height: 50px;
-            margin-bottom: 30px;
+            min-height: 40px;
+            margin-bottom: 20px;
             line-height: 1.5;
+        }
+
+        .live-controls-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .live-action-btn {
+            background: rgba(0, 243, 255, 0.15);
+            border: 1px solid var(--cyber-cyan);
+            color: var(--cyber-cyan);
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-action-btn.active {
+            background: var(--cyber-cyan);
+            color: #030014;
         }
 
         .close-live-btn {
             background: rgba(255, 0, 85, 0.2);
             border: 1px solid #ff0055;
             color: #ff0055;
-            padding: 10px 24px;
+            padding: 10px 18px;
             border-radius: 20px;
             font-weight: bold;
+            font-size: 13px;
             cursor: pointer;
             transition: 0.3s;
         }
 
-        .close-live-btn:hover {
-            background: #ff0055;
-            color: #fff;
-        }
+        .close-live-btn:hover { background: #ff0055; color: #fff; }
 
         /* Input Area */
         .input-area {
@@ -376,16 +407,8 @@
             flex-shrink: 0;
         }
 
-        .mic-btn {
-            background: rgba(0, 243, 255, 0.1);
-            border: 1px solid rgba(0, 243, 255, 0.3);
-            color: var(--cyber-cyan);
-        }
-
-        .send-btn {
-            background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple));
-            color: #030014;
-        }
+        .mic-btn { background: rgba(0, 243, 255, 0.1); border: 1px solid rgba(0, 243, 255, 0.3); color: var(--cyber-cyan); }
+        .send-btn { background: linear-gradient(135deg, var(--cyber-cyan), var(--cyber-purple)); color: #030014; }
     </style>
 </head>
 <body>
@@ -393,8 +416,10 @@
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
 
-    <!-- Gemini Live Fullscreen Style Overlay -->
+    <!-- Gemini Live Fullscreen Style Overlay with Screencast & Vision Capture -->
     <div id="live-overlay">
+        <video id="screen-preview" autoplay playsinline></video>
+        
         <div class="live-orb-container">
             <div class="live-pulse-ring"></div>
             <div class="live-pulse-ring"></div>
@@ -407,7 +432,11 @@
         </div>
 
         <div class="live-transcript" id="live-transcript-box">Aap boliye sir, main sun rahi hoon...</div>
-        <button class="close-live-btn" id="close-live-btn">Exit Live Mode</button>
+        
+        <div class="live-controls-row">
+            <button class="live-action-btn" id="screen-share-btn"><i class="fa-solid fa-desktop"></i> Screen Share</button>
+            <button class="close-live-btn" id="close-live-btn">Exit Live</button>
+        </div>
     </div>
 
     <div class="chat-container">
@@ -415,28 +444,21 @@
         <div class="chat-header">
             <div class="brand-box">
                 <div class="saara-avatar"><i class="fa-solid fa-atom"></i></div>
-                <div class="brand-text">
-                    <h2>Saara AI</h2>
-                </div>
+                <div class="brand-text"><h2>Saara AI</h2></div>
             </div>
             <div class="action-btns">
-                <!-- Gemini Live Launch Button -->
-                <button class="header-btn" id="live-toggle-btn" title="Launch Gemini Live Mode" style="background: rgba(255,0,127,0.2); border-color: var(--cyber-pink); color: var(--cyber-pink);">
+                <button class="header-btn" id="live-toggle-btn" title="Launch Saara Live & Screencast" style="background: rgba(255,0,127,0.2); border-color: var(--cyber-pink); color: var(--cyber-pink);">
                     <i class="fa-solid fa-podcast"></i>
                 </button>
-                <button class="header-btn" id="clear-btn" title="Clear Chat">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-                <button class="header-btn" id="speech-btn" title="Toggle Speech">
-                    <i class="fa-solid fa-volume-high"></i>
-                </button>
+                <button class="header-btn" id="clear-btn" title="Clear Chat"><i class="fa-solid fa-trash-can"></i></button>
+                <button class="header-btn" id="speech-btn" title="Toggle Speech"><i class="fa-solid fa-volume-high"></i></button>
             </div>
         </div>
 
         <!-- Chat Box -->
         <div class="messages-box" id="chat-box">
             <div class="msg-row bot">
-                <div class="msg-bubble">Namaste Sir! Upar diye gaye podcast/live button par click karke aap **Gemini Live Mode** shuru kar sakte hain!</div>
+                <div class="msg-bubble">Namaste Sir! Screen share karke aap apni screen Saara ko dikha sakte hain!</div>
             </div>
         </div>
 
@@ -450,28 +472,26 @@
         </div>
     </div>
 
-    <!-- JavaScript with safe Event Listeners -->
+    <!-- JavaScript with Vision Screen Capture Support -->
     <script>
         let speechEnabled = true;
         let isLiveActive = false;
         let currentAudio = null;
         let recognition = null;
         let isListening = false;
+        let screenStream = null;
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Button Event Bindings
             document.getElementById('speech-btn').addEventListener('click', toggleSpeech);
             document.getElementById('live-toggle-btn').addEventListener('click', toggleSaaraLive);
             document.getElementById('clear-btn').addEventListener('click', clearChat);
             document.getElementById('close-live-btn').addEventListener('click', toggleSaaraLive);
             document.getElementById('mic-btn').addEventListener('click', toggleSaaraLive);
             document.getElementById('send-btn').addEventListener('click', sendMessage);
+            document.getElementById('screen-share-btn').addEventListener('click', toggleScreenShare);
 
             document.getElementById('user-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { 
-                    e.preventDefault(); 
-                    sendMessage(); 
-                }
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
             });
         });
 
@@ -499,7 +519,58 @@
                 overlay.style.display = 'none';
                 if (recognition && isListening) { recognition.stop(); }
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+                stopScreenShare();
             }
+        }
+
+        async function toggleScreenShare() {
+            const preview = document.getElementById('screen-preview');
+            const shareBtn = document.getElementById('screen-share-btn');
+
+            if (!screenStream) {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    preview.srcObject = screenStream;
+                    preview.style.display = 'block';
+                    shareBtn.classList.add('active');
+                    shareBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Share';
+
+                    screenStream.getVideoTracks()[0].onended = () => {
+                        stopScreenShare();
+                    };
+                } catch (err) {
+                    console.log("Screen share error:", err);
+                }
+            } else {
+                stopScreenShare();
+            }
+        }
+
+        function stopScreenShare() {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            const preview = document.getElementById('screen-preview');
+            const shareBtn = document.getElementById('screen-share-btn');
+            if (preview) preview.style.display = 'none';
+            if (shareBtn) {
+                shareBtn.classList.remove('active');
+                shareBtn.innerHTML = '<i class="fa-solid fa-desktop"></i> Screen Share';
+            }
+        }
+
+        // Capture snapshot from screen preview video stream to send to backend AI
+        function captureScreenSnapshot() {
+            const video = document.getElementById('screen-preview');
+            if (!screenStream || video.readyState < 2) return null;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 360;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.7); // Returns Base64 image
         }
 
         function updateLiveUI(status, text, iconClass, showWave) {
@@ -556,11 +627,18 @@
             const botMsgId = 'bot-' + Date.now();
             chatBox.innerHTML += `<div class="msg-row bot" id="${botMsgId}"><div class="msg-bubble">...</div></div>`;
 
+            // Payload containing text message and screen snapshot if active
+            const payload = { message: message };
+            const screenImage = captureScreenSnapshot();
+            if (screenImage) {
+                payload.image = screenImage;
+            }
+
             try {
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify(payload)
                 });
 
                 const data = await response.json();
@@ -573,9 +651,7 @@
                     currentAudio.play();
 
                     currentAudio.onended = () => {
-                        if (isLiveActive) {
-                            startLiveListening();
-                        }
+                        if (isLiveActive) { startLiveListening(); }
                     };
                 } else {
                     if (isLiveActive) startLiveListening();
