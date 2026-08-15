@@ -27,6 +27,7 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         html, body {
@@ -144,8 +145,8 @@
             transition: all 0.3s ease;
         }
 
-        .header-btn:hover {
-            background: rgba(0, 243, 255, 0.2);
+        .header-btn:active {
+            transform: scale(0.92);
         }
 
         /* Messages Area */
@@ -204,14 +205,14 @@
             box-shadow: 0 0 12px rgba(0, 243, 255, 0.08);
         }
 
-        /* Gemini Live Overlay Modal */
+        /* Gemini Live Fullscreen Style Overlay */
         #live-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(3, 0, 20, 0.92);
+            background: rgba(3, 0, 20, 0.95);
             backdrop-filter: blur(25px);
             z-index: 100;
             display: none;
@@ -268,7 +269,6 @@
             z-index: 10;
         }
 
-        /* Waveform Bars (Gemini Live Style) */
         .waveform-bars {
             display: flex;
             align-items: center;
@@ -402,13 +402,12 @@
         </div>
         <div class="live-status-text" id="live-status-label">Saara is listening...</div>
         
-        <!-- Animated Waveform Bars (Gemini Live Vibe) -->
         <div class="waveform-bars" id="waveform-visual">
             <span></span><span></span><span></span><span></span><span></span>
         </div>
 
         <div class="live-transcript" id="live-transcript-box">Aap boliye sir, main sun rahi hoon...</div>
-        <button class="close-live-btn" onclick="toggleSaaraLive()">Exit Live Mode</button>
+        <button class="close-live-btn" id="close-live-btn">Exit Live Mode</button>
     </div>
 
     <div class="chat-container">
@@ -422,13 +421,13 @@
             </div>
             <div class="action-btns">
                 <!-- Gemini Live Launch Button -->
-                <button class="header-btn" onclick="toggleSaaraLive()" title="Launch Gemini Live Mode" style="background: rgba(255,0,127,0.2); border-color: var(--cyber-pink); color: var(--cyber-pink);">
+                <button class="header-btn" id="live-toggle-btn" title="Launch Gemini Live Mode" style="background: rgba(255,0,127,0.2); border-color: var(--cyber-pink); color: var(--cyber-pink);">
                     <i class="fa-solid fa-podcast"></i>
                 </button>
-                <button class="header-btn" onclick="clearChat()" title="Clear Chat">
+                <button class="header-btn" id="clear-btn" title="Clear Chat">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
-                <button class="header-btn" id="speech-btn" onclick="toggleSpeech()" title="Toggle Speech">
+                <button class="header-btn" id="speech-btn" title="Toggle Speech">
                     <i class="fa-solid fa-volume-high"></i>
                 </button>
             </div>
@@ -445,19 +444,36 @@
         <div class="input-area">
             <div class="input-wrapper">
                 <textarea id="user-input" placeholder="Saara se kuch bhi..." rows="1"></textarea>
-                <button class="icon-btn mic-btn" id="mic-btn" onclick="startVoiceInput()"><i class="fa-solid fa-microphone"></i></button>
-                <button class="icon-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                <button class="icon-btn mic-btn" id="mic-btn"><i class="fa-solid fa-microphone"></i></button>
+                <button class="icon-btn send-btn" id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript -->
+    <!-- JavaScript with safe Event Listeners -->
     <script>
         let speechEnabled = true;
         let isLiveActive = false;
         let currentAudio = null;
         let recognition = null;
         let isListening = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Button Event Bindings
+            document.getElementById('speech-btn').addEventListener('click', toggleSpeech);
+            document.getElementById('live-toggle-btn').addEventListener('click', toggleSaaraLive);
+            document.getElementById('clear-btn').addEventListener('click', clearChat);
+            document.getElementById('close-live-btn').addEventListener('click', toggleSaaraLive);
+            document.getElementById('mic-btn').addEventListener('click', toggleSaaraLive);
+            document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+            document.getElementById('user-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { 
+                    e.preventDefault(); 
+                    sendMessage(); 
+                }
+            });
+        });
 
         function toggleSpeech() {
             speechEnabled = !speechEnabled;
@@ -534,7 +550,6 @@
         }
 
         async function sendLiveMessage(message) {
-            // Chat history me bhi add kar do
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
             
@@ -551,7 +566,6 @@
                 const data = await response.json();
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
 
-                // Play Audio & Update Live UI to "Speaking"
                 if (speechEnabled && data.audio) {
                     updateLiveUI("Saara is speaking...", data.reply, "fa-solid fa-volume-high", true);
                     
@@ -560,22 +574,4 @@
 
                     currentAudio.onended = () => {
                         if (isLiveActive) {
-                            startLiveListening(); // Dubara sunna shuru
-                        }
-                    };
-                } else {
-                    if (isLiveActive) startLiveListening();
-                }
-            } catch (err) {
-                updateLiveUI("Connection Error", "Network issue ho gaya sir.", "fa-solid fa-triangle-exclamation", false);
-                if (isLiveActive) setTimeout(() => startLiveListening(), 2000);
-            }
-        }
-
-        function startVoiceInput() {
-            // Normal chat mic button
-            toggleSaaraLive(); // Direct Live mode open kar dega fast experience ke liye
-        }
-
-        async function sendMessage() {
-            const inputField = document.getElement
+                            startLiveLis
