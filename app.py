@@ -13,8 +13,11 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
-# --- UPDATED KAGGLE F5-TTS VOICE ENGINE URL ---
-KAGGLE_ENGINE_URL = "https://cool-bugs-kiss.loca.lt/generate"
+# Professional TTS API Keys
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY", "")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
@@ -31,7 +34,108 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Kaggle F5-TTS Cloned Voice TTS Route ---
+# --- Professional Multi-Provider TTS Functions (with Fallback) ---
+
+def call_sarvam_tts(text):
+    if not SARVAM_API_KEY:
+        raise Exception("Sarvam API key missing")
+    
+    url = "https://api.sarvam.ai/text-to-speech"
+    headers = {
+        "api-subscription-key": SARVAM_API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "inputs": [text],
+        "target_language_code": "hi-IN",
+        "speaker": "meera", # Best expressive female voice profile
+        "model": "bulbul:v1",
+        "pace": 1.0,
+        "speech_sample_rate": 22050,
+        "enable_preprocessing": True
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        data = res.json()
+        if "audios" in data and len(data["audios"]) > 0:
+            return data["audios"][0]
+    raise Exception(f"Sarvam Status {res.status_code}: {res.text}")
+
+def call_elevenlabs_tts(text):
+    if not ELEVENLABS_API_KEY:
+        raise Exception("ElevenLabs API key missing")
+    
+    voice_id = "21m00Tcm4TlvDq8ikWAM" # Standard natural female voice ID
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg"
+    }
+    payload = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.8,
+            "style": 0.2
+        }
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        return base64.b64encode(res.content).decode('utf-8')
+    raise Exception(f"ElevenLabs Status {res.status_code}: {res.text}")
+
+def call_cartesia_tts(text):
+    if not CARTESIA_API_KEY:
+        raise Exception("Cartesia API key missing")
+        
+    url = "https://api.cartesia.ai/tts/bytes"
+    headers = {
+        "X-API-Key": CARTESIA_API_KEY,
+        "Cartesia-Version": "2024-06-10",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model_id": "sonic-multilingual",
+        "transcript": text,
+        "voice": {
+            "mode": "id",
+            "id": "a0e99841-438c-4a64-b679-ae501e7d6091" # High quality female voice sample ID
+        },
+        "output_format": {
+            "container": "wav",
+            "encoding": "pcm_s16le",
+            "sample_rate": 22050
+        }
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        return base64.b64encode(res.content).decode('utf-8')
+    raise Exception(f"Cartesia Status {res.status_code}: {res.text}")
+
+def call_deepgram_tts(text):
+    if not DEEPGRAM_API_KEY:
+        raise Exception("Deepgram API key missing")
+        
+    url = "https://api.deepgram.com/v1/speak?model=aura-asteria-en"
+    headers = {
+        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": text
+    }
+    
+    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    if res.status_code == 200:
+        return base64.b64encode(res.content).decode('utf-8')
+    raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
+
+# --- TTS Route with Multi-Provider Fallback ---
 
 @app.route("/tts", methods=["POST"])
 def tts():
@@ -41,27 +145,24 @@ def tts():
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    try:
-        print("⚡ Sending text to Kaggle F5-TTS Engine...")
-        response = requests.post(
-            KAGGLE_ENGINE_URL,
-            json={"text": text},
-            headers={"Bypass-Tunnel-Reminder": "true"},
-            timeout=25
-        )
-        
-        if response.status_code == 200:
-            res_json = response.json()
-            audio_b64 = res_json.get("audio")
-            print("✅ Voice successfully generated via Kaggle F5-TTS!")
-            return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
-        else:
-            print(f"⚠️ Kaggle Engine Error Status: {response.status_code}")
-            return jsonify({"error": "Kaggle engine failed"}), 500
-            
-    except Exception as e:
-        print(f"⚠️ Kaggle Engine Connection Exception: {e}")
-        return jsonify({"error": "Voice engine unreachable"}), 500
+    tts_providers = [
+        ("Sarvam AI (Bulbul)", call_sarvam_tts),
+        ("ElevenLabs", call_elevenlabs_tts),
+        ("Cartesia", call_cartesia_tts),
+        ("Deepgram", call_deepgram_tts)
+    ]
+
+    for name, func in tts_providers:
+        try:
+            print(f"⚡ Trying TTS Provider: {name}...")
+            audio_b64 = func(text)
+            if audio_b64:
+                print(f"✅ Voice successfully generated via {name}!")
+                return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
+        except Exception as e:
+            print(f"⚠️ TTS Provider [{name}] Failed: {e}. Switching to next...")
+
+    return jsonify({"error": "All TTS services failed"}), 500
 
 # --- LLM Provider Functions ---
 
