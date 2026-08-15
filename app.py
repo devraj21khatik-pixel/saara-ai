@@ -13,8 +13,8 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
-# --- KAGGLE F5-TTS VOICE ENGINE URL ---
-KAGGLE_ENGINE_URL = "https://saara-voice-engine.loca.lt/generate"
+# --- UPDATED KAGGLE F5-TTS VOICE ENGINE URL ---
+KAGGLE_ENGINE_URL = "https://odd-tires-admire.loca.lt/generate"
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
@@ -51,7 +51,8 @@ def tts():
         )
         
         if response.status_code == 200:
-            audio_b64 = base64.b64encode(response.content).decode("utf-8")
+            res_json = response.json()
+            audio_b64 = res_json.get("audio")
             print("✅ Voice successfully generated via Kaggle F5-TTS!")
             return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
         else:
