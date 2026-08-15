@@ -14,7 +14,7 @@ NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
 # --- UPDATED KAGGLE F5-TTS VOICE ENGINE URL ---
-KAGGLE_ENGINE_URL = "https://odd-tires-admire.loca.lt/generate"
+KAGGLE_ENGINE_URL = "https://chatty-doors-bathe.loca.lt/generate"
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
