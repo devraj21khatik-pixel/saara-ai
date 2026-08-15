@@ -34,13 +34,13 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Multi-Provider TTS Functions (Primary: ElevenLabs, Fallback: Sarvam AI) ---
+# --- Multi-Provider TTS Functions (Primary: ElevenLabs Flash, Fallback: Sarvam AI v3) ---
 
 def call_elevenlabs_tts(text):
     if not ELEVENLABS_API_KEY:
         raise Exception("ElevenLabs API key missing")
     
-    # Pre-made voice ID
+    # Flash model optimized for free credits/tier compatibility
     voice_id = "21m00Tcm4TlvDq8ikWAM" 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -50,7 +50,7 @@ def call_elevenlabs_tts(text):
     }
     payload = {
         "text": text,
-        "model_id": "eleven_multilingual_v2",
+        "model_id": "eleven_flash_v2_5",
         "voice_settings": {
             "stability": 0.45,
             "similarity_boost": 0.8,
@@ -75,8 +75,8 @@ def call_sarvam_tts(text):
     payload = {
         "inputs": [text],
         "target_language_code": "hi-IN",
-        "speaker": "anushka", # Fixed: Valid expressive speaker name
-        "model": "bulbul:v1",
+        "speaker": "anushka",
+        "model": "bulbul:v3", # Updated to current supported model version
         "pace": 1.0,
         "speech_sample_rate": 22050,
         "enable_preprocessing": True
@@ -100,7 +100,7 @@ def call_cartesia_tts(text):
         "Content-Type": "application/json"
     }
     payload = {
-        "model_id": "sonic-multilingual",
+        "model_id": "sonic",
         "transcript": text,
         "voice": {
             "mode": "id",
