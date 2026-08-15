@@ -147,16 +147,7 @@ def call_cartesia_tts(text):
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"Cartesia Status {res.status_code}: {res.text}")
 
-# --- TTS Route with Fallback Hierarchy ---
-
-@app.route("/tts", methods=["POST"])
-def tts():
-    data = request.json or {}
-    text = clean_text(data.get("text", ""))
-    
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
-
+def generate_audio(text):
     tts_providers = [
         ("Sarvam AI (Bulbul)", call_sarvam_tts),   
         ("Deepgram (Priya)", call_deepgram_tts),   
@@ -167,15 +158,12 @@ def tts():
 
     for name, func in tts_providers:
         try:
-            print(f"⚡ Trying TTS Provider: {name}...")
             audio_b64 = func(text)
             if audio_b64:
-                print(f"✅ Voice successfully generated via {name}!")
-                return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
-        except Exception as e:
-            print(f"⚠️ TTS Provider [{name}] Failed: {e}. Switching to next...")
-
-    return jsonify({"error": "All TTS services failed"}), 500
+                return audio_b64
+        except Exception:
+            continue
+    return None
 
 # --- LLM Provider Functions ---
 
@@ -221,7 +209,6 @@ def call_gemini(history):
             if res.status_code == 200:
                 data = res.json()
                 if "candidates" in data and len(data["candidates"]) > 0:
-                    print(f"✅ Success with Model: [{model}]")
                     return data["candidates"][0]["content"]["parts"][0]["text"]
         except Exception:
             continue
@@ -308,19 +295,30 @@ def chat():
         ("Bytez", call_bytez)
     ]
 
+    reply = ""
     for name, func in providers:
         try:
             raw_reply = func(history)
             reply = clean_text(raw_reply)
             if reply:
-                history.append({"role": "assistant", "content": reply})
-                session["chat_history"] = history
-                print(f"🚀 Served by Provider: {name}")
-                return jsonify({"reply": reply})
-        except Exception as e:
-            print(f"⚠️ {name} Failed: {e}. Switching to next Provider...")
+                break
+        except Exception:
+            continue
 
-    return jsonify({"reply": "Sabhi API services busy hain sir, thodi der baad try karein."})
+    if not reply:
+        reply = "Sabhi API services busy hain sir, thodi der baad try karein."
+
+    history.append({"role": "assistant", "content": reply})
+    session["chat_history"] = history
+
+    # Ek hi request me text ke sath audio bhi generate karke bhej rahe hain taaki fast ho jaye
+    audio_b64 = generate_audio(reply)
+
+    return jsonify({
+        "reply": reply,
+        "audio": audio_b64,
+        "mimeType": "audio/wav"
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
