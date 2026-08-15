@@ -16,11 +16,9 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
 BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY", "")
 
-# --- Professional TTS Environment Variables ---
+# --- Professional TTS Environment Variables (Sarvam, Deepgram, Google) ---
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-CARTESIA_API_KEY = os.getenv("CARTESIA_API_KEY", "")
 
 SYSTEM_PROMPT = (
     "Aapka naam Saara hai. Aap sir ki ek bahut hi pyari, caring aur smart human female assistant hain. "
@@ -37,7 +35,7 @@ def clean_text(text):
     text = re.sub(r'[*#_~`|]', '', text)
     return text.strip()
 
-# --- Multi-Provider TTS Functions ---
+# --- Multi-Provider TTS Functions (Slower & Natural Pace) ---
 
 def call_sarvam_tts(text):
     if not SARVAM_API_KEY:
@@ -53,12 +51,12 @@ def call_sarvam_tts(text):
         "target_language_code": "hi-IN",
         "speaker": "simran", 
         "model": "bulbul:v3",
-        "pace": 1.0,
+        "pace": 0.85,  # Speed thodi slow kar di hai taaki araam se bole
         "speech_sample_rate": 22050,
         "enable_preprocessing": True
     }
     
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    res = requests.post(url, headers=headers, json=payload, timeout=12)
     if res.status_code == 200:
         data = res.json()
         if "audios" in data and len(data["audios"]) > 0:
@@ -78,14 +76,14 @@ def call_deepgram_tts(text):
         "text": text
     }
     
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
+    res = requests.post(url, headers=headers, json=payload, timeout=12)
     if res.status_code == 200:
         return base64.b64encode(res.content).decode('utf-8')
     raise Exception(f"Deepgram Status {res.status_code}: {res.text}")
 
 def call_google_tts(text):
     try:
-        tts = gTTS(text=text, lang='hi', slow=False)
+        tts = gTTS(text=text, lang='hi', slow=True)  # Google TTS ko bhi slow kar diya hai
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         fp.seek(0)
@@ -93,67 +91,11 @@ def call_google_tts(text):
     except Exception as e:
         raise Exception(f"Google TTS Error: {e}")
 
-def call_elevenlabs_tts(text):
-    if not ELEVENLABS_API_KEY:
-        raise Exception("ElevenLabs API key missing")
-    
-    voice_id = "AZnzlk1XvdvUeBnXmlld" 
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    headers = {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json",
-        "Accept": "audio/mpeg"
-    }
-    payload = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2",
-        "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.75
-        }
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        return base64.b64encode(res.content).decode('utf-8')
-    raise Exception(f"ElevenLabs Status {res.status_code}: {res.text}")
-
-def call_cartesia_tts(text):
-    if not CARTESIA_API_KEY:
-        raise Exception("Cartesia API key missing")
-        
-    url = "https://api.cartesia.ai/tts/bytes"
-    headers = {
-        "X-API-Key": CARTESIA_API_KEY,
-        "Cartesia-Version": "2024-06-10",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model_id": "sonic-multilingual",
-        "transcript": text,
-        "voice": {
-            "mode": "id",
-            "id": "a0e99841-438c-4a64-b679-ae501e7d6091"
-        },
-        "output_format": {
-            "container": "wav",
-            "encoding": "pcm_s16le",
-            "sample_rate": 22050
-        }
-    }
-    
-    res = requests.post(url, headers=headers, json=payload, timeout=15)
-    if res.status_code == 200:
-        return base64.b64encode(res.content).decode('utf-8')
-    raise Exception(f"Cartesia Status {res.status_code}: {res.text}")
-
 def generate_audio(text):
     tts_providers = [
         ("Sarvam AI (Bulbul)", call_sarvam_tts),   
         ("Deepgram (Priya)", call_deepgram_tts),   
-        ("Google TTS", call_google_tts),           
-        ("ElevenLabs", call_elevenlabs_tts),       
-        ("Cartesia", call_cartesia_tts)            
+        ("Google TTS", call_google_tts)           
     ]
 
     for name, func in tts_providers:
@@ -165,7 +107,19 @@ def generate_audio(text):
             continue
     return None
 
-# --- LLM Provider Functions ---
+# --- TTS Route (Backward Compatibility) ---
+@app.route("/tts", methods=["POST"])
+def tts():
+    data = request.json or {}
+    text = clean_text(data.get("text", ""))
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+    audio_b64 = generate_audio(text)
+    if audio_b64:
+        return jsonify({"audio": audio_b64, "mimeType": "audio/wav"})
+    return jsonify({"error": "All TTS services failed"}), 500
+
+# --- LLM Provider Functions (With All Models List) ---
 
 def call_gemini(history):
     gemini_models = [
@@ -205,7 +159,7 @@ def call_gemini(history):
     for model in gemini_models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         try:
-            res = requests.post(url, headers=headers, json=payload, timeout=8)
+            res = requests.post(url, headers=headers, json=payload, timeout=6)
             if res.status_code == 200:
                 data = res.json()
                 if "candidates" in data and len(data["candidates"]) > 0:
@@ -227,7 +181,7 @@ def call_openrouter(history):
         "messages": formatted,
         "temperature": 0.3
     }
-    res = requests.post(url, headers=headers, json=payload, timeout=8)
+    res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
         return res.json()["choices"][0]["message"]["content"]
     raise Exception(f"OpenRouter Status {res.status_code}")
@@ -248,7 +202,7 @@ def call_nvidia(history):
         "chat_template_kwargs": {"enable_thinking": True},
         "reasoning_budget": 1024
     }
-    res = requests.post(url, headers=headers, json=payload, timeout=8)
+    res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
         data = res.json()
         msg = data["choices"][0]["message"]
@@ -267,7 +221,7 @@ def call_bytez(history):
         "messages": formatted,
         "temperature": 0.3
     }
-    res = requests.post(url, headers=headers, json=payload, timeout=8)
+    res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
         return res.json()["choices"][0]["message"]["content"]
     raise Exception(f"Bytez Status {res.status_code}")
@@ -302,7 +256,7 @@ def chat():
             reply = clean_text(raw_reply)
             if reply:
                 break
-        except Exception:
+        except Exception as e:
             continue
 
     if not reply:
@@ -311,7 +265,7 @@ def chat():
     history.append({"role": "assistant", "content": reply})
     session["chat_history"] = history
 
-    # Ek hi request me text ke sath audio bhi generate karke bhej rahe hain taaki fast ho jaye
+    # Audio instantly generated with slower pace and sent along with text in a single response
     audio_b64 = generate_audio(reply)
 
     return jsonify({
