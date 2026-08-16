@@ -601,7 +601,7 @@
         </div>
     </div>
 
-      <!-- JavaScript with Chat History & Vision Support -->
+    <!-- JavaScript with Instant Fast Chat, Chat History, Vision & Browser Female TTS Support -->
     <script>
         let speechEnabled = true;
         let isLiveActive = false;
@@ -637,6 +637,11 @@
                 loadChatMessages(currentChatId);
             } else {
                 startNewChat();
+            }
+
+            // Load browser voices for TTS
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
             }
         });
 
@@ -742,8 +747,40 @@
             } else {
                 btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
                 btn.style.color = '#64748b';
+                if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             }
+        }
+
+        // Friendly Browser TTS for normal chat (Filters out emojis, code and markdown symbols)
+        function speakFriendlyText(text) {
+            if (!speechEnabled || !('speechSynthesis' in window)) return;
+            
+            window.speechSynthesis.cancel();
+
+            const cleanText = text
+                .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+                .replace(/[*#_`~\[\]()>-]/g, ' ')
+                .replace(/```[\s\S]*?```/g, 'code block skip kiya gaya hai')
+                .trim();
+
+            if (!cleanText) return;
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'hi-IN';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.1;
+
+            const voices = window.speechSynthesis.getVoices();
+            const femaleVoice = voices.find(v => 
+                (v.lang.includes('hi') || v.lang.includes('en')) && 
+                (v.name.includes('Female') || v.name.includes('Google') || v.name.includes('Kalpana') || v.name.includes('Swara') || v.name.includes('Zira') || v.name.includes('Heera'))
+            );
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
         }
 
         function toggleSaaraLive() {
@@ -751,6 +788,7 @@
             const overlay = document.getElementById('live-overlay');
             
             if (isLiveActive) {
+                if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
                 overlay.style.display = 'flex';
                 startLiveListening();
             } else {
@@ -771,18 +809,12 @@
                     preview.srcObject = screenStream;
                     preview.style.display = 'block';
                     
-                    try {
-                        await preview.play();
-                    } catch (e) {
-                        console.log("Play error:", e);
-                    }
+                    try { await preview.play(); } catch (e) {}
 
                     shareBtn.classList.add('active');
                     shareBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Share';
 
-                    screenStream.getVideoTracks()[0].onended = () => {
-                        stopScreenShare();
-                    };
+                    screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
                 } catch (err) {
                     console.log("Screen share error:", err);
                 }
@@ -864,6 +896,7 @@
             }
         }
 
+        // Live mode uses server backend audio as before
         async function sendLiveMessage(message) {
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
@@ -875,9 +908,7 @@
 
             const payload = { message: message };
             const screenImage = captureScreenSnapshot();
-            if (screenImage) {
-                payload.image = screenImage;
-            }
+            if (screenImage) { payload.image = screenImage; }
 
             try {
                 const response = await fetch('/chat', {
@@ -897,7 +928,7 @@
                     currentAudio.play();
 
                     currentAudio.onended = () => {
-                        if (isLiveActive) { startLiveListening(); }
+                        if (isLiveActive) { startLiveListening(); };
                     };
                 } else {
                     if (isLiveActive) startLiveListening();
@@ -908,6 +939,7 @@
             }
         }
 
+        // Normal chat is SUPER FAST and uses browser friendly TTS
         async function sendMessage() {
             const inputField = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
@@ -930,12 +962,14 @@
                     body: JSON.stringify({ message: message })
                 });
                 const data = await response.json();
+                
+                // Text appears immediately without waiting for any server audio generation
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
                 addMessageToCurrentChat('bot', data.reply);
                 
-                if (speechEnabled && data.audio) {
-                    currentAudio = new Audio(`data:${data.mimeType || 'audio/wav'};base64,${data.audio}`);
-                    currentAudio.play();
+                // Speak using client-side friendly TTS
+                if (speechEnabled) {
+                    speakFriendlyText(data.reply);
                 }
             } catch (error) {
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerText = "Server Connection Error!";
@@ -950,6 +984,7 @@
                 saveChatsToStorage();
                 loadChatMessages(currentChatId);
             }
+            if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         }
     </script>
