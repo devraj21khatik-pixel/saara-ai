@@ -601,7 +601,7 @@
         </div>
     </div>
 
-    <!-- JavaScript with Instant Fast Chat, Chat History, Vision & Browser Female TTS Support -->
+      <!-- JavaScript with Instant Fast Chat, Chat History, Vision & Browser Female TTS Support -->
     <script>
         let speechEnabled = true;
         let isLiveActive = false;
@@ -896,7 +896,7 @@
             }
         }
 
-        // Live mode uses server backend audio as before
+        // Live mode uses server backend audio (Sarvam/Deepgram/Google)
         async function sendLiveMessage(message) {
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
@@ -906,7 +906,8 @@
             const botMsgId = 'bot-' + Date.now();
             chatBox.innerHTML += `<div class="msg-row bot" id="${botMsgId}"><div class="msg-bubble">...</div></div>`;
 
-            const payload = { message: message };
+            // Yahan is_live: true bhej rahe hain taaki server TTS generate kare
+            const payload = { message: message, is_live: true };
             const screenImage = captureScreenSnapshot();
             if (screenImage) { payload.image = screenImage; }
 
@@ -939,7 +940,7 @@
             }
         }
 
-        // Normal chat is SUPER FAST and uses browser friendly TTS
+        // Normal chat is SUPER FAST and uses browser friendly TTS (Server TTS is skipped)
         async function sendMessage() {
             const inputField = document.getElementById('user-input');
             const chatBox = document.getElementById('chat-box');
@@ -956,14 +957,14 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
+                // Yahan is_live: false bhej rahe hain taaki server TTS skip ho jaye aur chat super-fast ho
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ message: message, is_live: false })
                 });
                 const data = await response.json();
                 
-                // Text appears immediately without waiting for any server audio generation
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
                 addMessageToCurrentChat('bot', data.reply);
                 
