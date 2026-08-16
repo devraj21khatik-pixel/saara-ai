@@ -3,8 +3,16 @@ import re
 import base64
 import io
 import requests
+import logging
 from flask import Flask, render_template, request, jsonify, session
 from gtts import gTTS
+
+# --- Logging Configuration (Terminal mein logs dekhne ke liye) ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler()]
+)
 
 app = Flask(__name__, template_folder='.')
 application = app  # Vercel compatibility ke liye zaroori alias
@@ -100,11 +108,15 @@ def generate_audio(text):
 
     for name, func in tts_providers:
         try:
+            logging.info(f"Trying TTS Provider: {name}")
             audio_b64 = func(text)
             if audio_b64:
+                logging.info(f"Successfully generated audio using {name}")
                 return audio_b64
-        except Exception:
+        except Exception as e:
+            logging.warning(f"TTS Provider {name} failed: {e}")
             continue
+    logging.error("All TTS services failed.")
     return None
 
 # --- TTS Route (Backward Compatibility) ---
@@ -112,6 +124,7 @@ def generate_audio(text):
 def tts():
     data = request.json or {}
     text = clean_text(data.get("text", ""))
+    logging.info(f"Received TTS route request for text length: {len(text)}")
     if not text:
         return jsonify({"error": "No text provided"}), 400
     audio_b64 = generate_audio(text)
@@ -163,8 +176,9 @@ def call_gemini(history):
             if res.status_code == 200:
                 data = res.json()
                 if "candidates" in data and len(data["candidates"]) > 0:
+                    logging.info(f"Gemini success with model: {model}")
                     return data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception:
+        except Exception as e:
             continue
 
     raise Exception("All Gemini and Gemma models failed or rate limited")
@@ -183,6 +197,7 @@ def call_openrouter(history):
     }
     res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
+        logging.info("OpenRouter success")
         return res.json()["choices"][0]["message"]["content"]
     raise Exception(f"OpenRouter Status {res.status_code}")
 
@@ -204,6 +219,7 @@ def call_nvidia(history):
     }
     res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
+        logging.info("NVIDIA success")
         data = res.json()
         msg = data["choices"][0]["message"]
         return msg.get("content") or msg.get("reasoning_content")
@@ -223,6 +239,7 @@ def call_bytez(history):
     }
     res = requests.post(url, headers=headers, json=payload, timeout=6)
     if res.status_code == 200:
+        logging.info("Bytez success")
         return res.json()["choices"][0]["message"]["content"]
     raise Exception(f"Bytez Status {res.status_code}")
 
@@ -230,12 +247,15 @@ def call_bytez(history):
 
 @app.route("/")
 def home():
+    logging.info("Home route accessed.")
     session["chat_history"] = []
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message", "")
+    logging.info(f"Received chat message: {user_message}")
+
     if "chat_history" not in session:
         session["chat_history"] = []
 
@@ -252,14 +272,18 @@ def chat():
     reply = ""
     for name, func in providers:
         try:
+            logging.info(f"Trying LLM Provider: {name}")
             raw_reply = func(history)
             reply = clean_text(raw_reply)
             if reply:
+                logging.info(f"LLM Provider {name} responded successfully.")
                 break
         except Exception as e:
+            logging.warning(f"LLM Provider {name} failed: {e}")
             continue
 
     if not reply:
+        logging.error("All LLM providers failed.")
         reply = "Sabhi API services busy hain sir, thodi der baad try karein."
 
     history.append({"role": "assistant", "content": reply})
@@ -275,4 +299,5 @@ def chat():
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    logging.info("Starting Flask application with complete code and logging...")
+    app.run(host="0.0.0.0", port=5000, debug=True)
