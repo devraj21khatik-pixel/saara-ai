@@ -16,13 +16,20 @@ jobs:
         with:
           node-version: 18
 
+      - name: Create dummy webDir
+        run: |
+          mkdir -p www
+          echo "<html><body>Loading...</body></html>" > www/index.html
+
       - name: Install Capacitor Dependencies
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
 
-      - name: Add Android Platform
-        run: npx cap add android
+      - name: Add Android Platform and Sync
+        run: |
+          npx cap add android
+          npx cap sync android
 
       - name: Build Debug APK
         run: |
