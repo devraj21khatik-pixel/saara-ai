@@ -46,12 +46,12 @@ jobs:
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' $MANIFEST
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />' $MANIFEST
           
-          # Add Service declaration inside application tag
+          # Inject ScreenCastService into Manifest inside application tag
           sed -i 's/<application/\<application\>\n        <service android:name=".ScreenCastService" android:foregroundServiceType="mediaProjection" android:exported="false" \/>/' $MANIFEST
 
-      - name: Setup MainActivity and ScreenCastService
+      - name: Setup Native ScreenCastService and MainActivity Bridge
         run: |
-          # 1. Create ScreenCastService.java
+          # 1. Create ScreenCastService.java for True Native Background Casting
           SERVICE_FILE="android/app/src/main/java/com/saara/ai/ScreenCastService.java"
           mkdir -p android/app/src/main/java/com/saara/ai/
           cat << 'EOF' > $SERVICE_FILE
@@ -67,7 +67,7 @@ jobs:
           import androidx.core.app.NotificationCompat;
 
           public class ScreenCastService extends Service {
-              private static final String CHANNEL_ID = "ScreenCastChannel";
+              private static final String CHANNEL_ID = "SaaraScreenCastChannel";
 
               @Override
               public void onCreate() {
@@ -78,12 +78,13 @@ jobs:
               @Override
               public int onStartCommand(Intent intent, int flags, int startId) {
                   Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                          .setContentTitle("Saara AI")
-                          .setContentText("Screen casting is active...")
+                          .setContentTitle("Saara AI is active")
+                          .setContentText("Screen casting and audio stream are live...")
                           .setSmallIcon(android.R.drawable.ic_menu_camera)
+                          .setPriority(NotificationCompat.PRIORITY_HIGH)
                           .build();
 
-                  startForeground(1, notification);
+                  startForeground(1337, notification);
                   return START_NOT_STICKY;
               }
 
@@ -96,8 +97,8 @@ jobs:
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                       NotificationChannel serviceChannel = new NotificationChannel(
                               CHANNEL_ID,
-                              "Screen Cast Service Channel",
-                              NotificationManager.IMPORTANCE_DEFAULT
+                              "Saara Screen Cast Service Channel",
+                              NotificationManager.IMPORTANCE_HIGH
                       );
                       NotificationManager manager = getSystemService(NotificationManager.class);
                       if (manager != null) {
@@ -108,7 +109,7 @@ jobs:
           }
           EOF
 
-          # 2. Update MainActivity.java
+          # 2. Update MainActivity.java with Native Bridges and Back Gesture Fix
           MAIN_ACTIVITY="android/app/src/main/java/com/saara/ai/MainActivity.java"
           if [ -f "$MAIN_ACTIVITY" ]; then
             cat << 'EOF' > $MAIN_ACTIVITY
@@ -186,7 +187,7 @@ jobs:
                           screenCaptureResultCode = resultCode;
                           screenCaptureIntent = data;
 
-                          // Start Foreground Service to handle casting state like Google app
+                          // Start Native Foreground Service to maintain live casting state
                           Intent serviceIntent = new Intent(this, ScreenCastService.class);
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                               startForegroundService(serviceIntent);
