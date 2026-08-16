@@ -37,6 +37,17 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      - name: Add Required Permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          # Microphone
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST
+          # Floating Icon (System Overlay)
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />' $MANIFEST
+          # Foreground Service (Needed for screen capturing and background work)
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' $MANIFEST
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />' $MANIFEST
+
       - name: Fix Kotlin Version Conflict
         run: |
           echo "
