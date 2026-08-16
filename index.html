@@ -81,6 +81,109 @@
             overflow: hidden;
         }
 
+        /* Chat History Sidebar Panel Styles */
+        .history-sidebar {
+            position: absolute;
+            top: 0;
+            left: -300px;
+            width: 280px;
+            height: 100%;
+            background: rgba(5, 3, 22, 0.96);
+            backdrop-filter: blur(25px);
+            border-right: 1px solid var(--glass-border);
+            z-index: 120;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .history-sidebar.open {
+            left: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .sidebar-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            color: var(--cyber-cyan);
+            letter-spacing: 0.5px;
+        }
+
+        .new-chat-btn {
+            background: var(--user-gradient);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 15px rgba(255, 0, 128, 0.3);
+            transition: 0.2s;
+        }
+
+        .new-chat-btn:active { transform: scale(0.95); }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-list::-webkit-scrollbar { width: 3px; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--cyber-cyan); border-radius: 10px; }
+
+        .history-item {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            font-size: 13px;
+            color: #cbd5e1;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover, .history-item.active {
+            background: rgba(0, 243, 255, 0.1);
+            border-color: var(--cyber-cyan);
+            color: #fff;
+        }
+
+        .sidebar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 110;
+            display: none;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+        }
+
         /* Header Layout */
         .chat-header {
             padding: 10px 14px;
@@ -213,7 +316,7 @@
             background: rgba(3, 0, 15, 0.96);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
-            z-index: 100;
+            z-index: 130;
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -429,6 +532,16 @@
     <div class="bg-orb orb-1"></div>
     <div class="bg-orb orb-2"></div>
 
+    <!-- Chat History Sidebar Panel -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div class="history-sidebar" id="history-sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Chat History</h3>
+            <button class="new-chat-btn" id="new-chat-btn"><i class="fa-solid fa-plus"></i> New Chat</button>
+        </div>
+        <div class="history-list" id="history-list-box"></div>
+    </div>
+
     <!-- Gemini Live Fullscreen Style Overlay with Screencast & Vision Capture -->
     <div id="live-overlay">
         <video id="screen-preview" autoplay playsinline muted></video>
@@ -456,6 +569,9 @@
         <!-- Header -->
         <div class="chat-header">
             <div class="brand-box">
+                <button class="header-btn" id="history-toggle-btn" title="Chat History" style="border-color: var(--cyber-cyan);">
+                    <i class="fa-solid fa-bars-staggered"></i>
+                </button>
                 <div class="saara-avatar"><i class="fa-solid fa-atom"></i></div>
                 <div class="brand-text"><h2>Saara AI</h2></div>
             </div>
@@ -485,7 +601,7 @@
         </div>
     </div>
 
-    <!-- JavaScript with Vision Screen Capture Support -->
+      <!-- JavaScript with Chat History & Vision Support -->
     <script>
         let speechEnabled = true;
         let isLiveActive = false;
@@ -493,6 +609,10 @@
         let recognition = null;
         let isListening = false;
         let screenStream = null;
+
+        // Chat History State
+        let chats = JSON.parse(localStorage.getItem('saara_chats')) || [];
+        let currentChatId = localStorage.getItem('saara_current_chat_id') || null;
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('speech-btn').addEventListener('click', toggleSpeech);
@@ -503,10 +623,115 @@
             document.getElementById('send-btn').addEventListener('click', sendMessage);
             document.getElementById('screen-share-btn').addEventListener('click', toggleScreenShare);
 
+            // History Sidebar Controls
+            document.getElementById('history-toggle-btn').addEventListener('click', toggleSidebar);
+            document.getElementById('sidebar-overlay').addEventListener('click', toggleSidebar);
+            document.getElementById('new-chat-btn').addEventListener('click', startNewChat);
+
             document.getElementById('user-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
             });
+
+            loadChatHistoryList();
+            if (currentChatId) {
+                loadChatMessages(currentChatId);
+            } else {
+                startNewChat();
+            }
         });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('history-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function startNewChat() {
+            currentChatId = 'chat_' + Date.now();
+            localStorage.setItem('saara_current_chat_id', currentChatId);
+            
+            const newChatObj = {
+                id: currentChatId,
+                title: 'New Conversation',
+                messages: [{ sender: 'bot', text: 'Namaste Sir! Nayi chat shuru ho chuki hai. Bataiye kya madad karun?' }]
+            };
+
+            chats.unshift(newChatObj);
+            saveChatsToStorage();
+            renderChatBox();
+            loadChatHistoryList();
+            toggleSidebar();
+        }
+
+        function saveChatsToStorage() {
+            localStorage.setItem('saara_chats', JSON.stringify(chats));
+        }
+
+        function loadChatHistoryList() {
+            const listBox = document.getElementById('history-list-box');
+            listBox.innerHTML = '';
+
+            if (chats.length === 0) {
+                listBox.innerHTML = '<div style="color: #64748b; font-size: 13px; text-align: center; margin-top: 20px;">Koi history nahi hai</div>';
+                return;
+            }
+
+            chats.forEach(chat => {
+                const item = document.createElement('div');
+                item.className = `history-item ${chat.id === currentChatId ? 'active' : ''}`;
+                item.innerText = chat.title;
+                item.onclick = () => switchChat(chat.id);
+                listBox.appendChild(item);
+            });
+        }
+
+        function switchChat(chatId) {
+            currentChatId = chatId;
+            localStorage.setItem('saara_current_chat_id', currentChatId);
+            loadChatMessages(chatId);
+            loadChatHistoryList();
+            toggleSidebar();
+        }
+
+        function loadChatMessages(chatId) {
+            const chatObj = chats.find(c => c.id === chatId);
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+
+            if (!chatObj || !chatObj.messages) {
+                chatBox.innerHTML = `<div class="msg-row bot"><div class="msg-bubble">Namaste Sir!</div></div>`;
+                return;
+            }
+
+            chatObj.messages.forEach(msg => {
+                const row = document.createElement('div');
+                row.className = `msg-row ${msg.sender}`;
+                row.innerHTML = `<div class="msg-bubble">${msg.sender === 'bot' ? marked.parse(msg.text) : msg.text}</div>`;
+                chatBox.appendChild(row);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function renderChatBox() {
+            loadChatMessages(currentChatId);
+        }
+
+        function addMessageToCurrentChat(sender, text) {
+            let chatObj = chats.find(c => c.id === currentChatId);
+            if (!chatObj) {
+                startNewChat();
+                chatObj = chats.find(c => c.id === currentChatId);
+            }
+
+            if (sender === 'user' && chatObj.title === 'New Conversation') {
+                chatObj.title = text.length > 25 ? text.substring(0, 25) + '...' : text;
+            }
+
+            chatObj.messages.push({ sender, text });
+            saveChatsToStorage();
+            loadChatHistoryList();
+        }
 
         function toggleSpeech() {
             speechEnabled = !speechEnabled;
@@ -642,6 +867,8 @@
         async function sendLiveMessage(message) {
             const chatBox = document.getElementById('chat-box');
             chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
+            addMessageToCurrentChat('user', message);
+            chatBox.scrollTop = chatBox.scrollHeight;
             
             const botMsgId = 'bot-' + Date.now();
             chatBox.innerHTML += `<div class="msg-row bot" id="${botMsgId}"><div class="msg-bubble">...</div></div>`;
@@ -661,6 +888,7 @@
 
                 const data = await response.json();
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
+                addMessageToCurrentChat('bot', data.reply);
 
                 if (speechEnabled && data.audio) {
                     updateLiveUI("Saara is speaking...", data.reply, "fa-solid fa-volume-high", true);
@@ -687,6 +915,7 @@
             if (!message) return;
 
             chatBox.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${message}</div></div>`;
+            addMessageToCurrentChat('user', message);
             inputField.value = '';
             chatBox.scrollTop = chatBox.scrollHeight;
 
@@ -702,6 +931,7 @@
                 });
                 const data = await response.json();
                 document.getElementById(botMsgId).querySelector('.msg-bubble').innerHTML = marked.parse(data.reply);
+                addMessageToCurrentChat('bot', data.reply);
                 
                 if (speechEnabled && data.audio) {
                     currentAudio = new Audio(`data:${data.mimeType || 'audio/wav'};base64,${data.audio}`);
@@ -714,7 +944,12 @@
         }
 
         function clearChat() {
-            document.getElementById('chat-box').innerHTML = `<div class="msg-row bot"><div class="msg-bubble">Namaste Sir! Chat clear kar di gayi hai.</div></div>`;
+            let chatObj = chats.find(c => c.id === currentChatId);
+            if (chatObj) {
+                chatObj.messages = [{ sender: 'bot', text: 'Namaste Sir! Chat clear kar di gayi hai.' }];
+                saveChatsToStorage();
+                loadChatMessages(currentChatId);
+            }
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
         }
     </script>
