@@ -75,7 +75,6 @@ jobs:
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
                   
-                  // 1. Request Runtime Microphone Permission immediately
                   if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                       ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO_PERMISSION);
                   }
@@ -95,7 +94,6 @@ jobs:
                           }
                       });
 
-                      // 2. Bridge to trigger Native Screen Capture Dialog from Web
                       this.bridge.getWebView().addJavascriptInterface(new Object() {
                           @JavascriptInterface
                           public void requestScreenCapture() {
@@ -113,9 +111,7 @@ jobs:
                   super.onActivityResult(requestCode, resultCode, data);
                   if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
                       if (resultCode == RESULT_OK && data != null) {
-                          // Notify Web Frontend that Screen Capture permission was granted successfully
                           if (this.bridge != null && this.bridge.getWebView() != null) {
-                              final Intent captureData = data;
                               runOnUiThread(new Runnable() {
                                   @Override
                                   public void run() {
