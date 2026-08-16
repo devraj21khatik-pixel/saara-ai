@@ -253,8 +253,11 @@ def home():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_message = request.json.get("message", "")
-    logging.info(f"Received chat message: {user_message}")
+    data = request.json or {}
+    user_message = data.get("message", "")
+    is_live = data.get("is_live", False)  # Check karein ki live mode active hai ya nahi
+    
+    logging.info(f"Received chat message: {user_message} | Is Live Mode: {is_live}")
 
     if "chat_history" not in session:
         session["chat_history"] = []
@@ -289,8 +292,13 @@ def chat():
     history.append({"role": "assistant", "content": reply})
     session["chat_history"] = history
 
-    # Audio instantly generated with slower pace and sent along with text in a single response
-    audio_b64 = generate_audio(reply)
+    # Audio sirf tabhi generate hoga jab Live mode active ho!
+    audio_b64 = None
+    if is_live:
+        logging.info("Live mode active: Generating server-side audio...")
+        audio_b64 = generate_audio(reply)
+    else:
+        logging.info("Normal chat: Skipping server-side TTS for fast text response.")
 
     return jsonify({
         "reply": reply,
@@ -299,5 +307,5 @@ def chat():
     })
 
 if __name__ == "__main__":
-    logging.info("Starting Flask application with complete code and logging...")
+    logging.info("Starting Flask application with conditional TTS and logging...")
     app.run(host="0.0.0.0", port=5000, debug=True)
