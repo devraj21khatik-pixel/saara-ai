@@ -809,22 +809,21 @@
     const preview = document.getElementById('screen-preview'); 
     const shareBtn = document.getElementById('screen-share-btn');
 
-    // 1. Agar Native Android App mein hain toh Native Bridge trigger karein
+    // Agar Android Native App ke andar hain:
     if (window.AndroidBridge && window.AndroidBridge.requestScreenCapture) {
         window.AndroidBridge.requestScreenCapture();
         
-        // Jab native system pop-up mein user "Start now" click karega
         window.onScreenCaptureGranted = function() {
-            console.log("Native screen capture granted!");
+            console.log("Screen casting allowed by user!");
             if (shareBtn) {
                 shareBtn.classList.add('active');
             }
-            // Yahan aap apna streaming/canvas logic dal sakte hain
+            // Yahan par aap apna screen stream / canvas frame processing start kar sakte hain
         };
         return;
     }
 
-    // 2. Fallback: Agar standard Web Browser / PWA mein hain
+    // Browser ke liye fallback
     if (!screenStream) {
         try {
             screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -843,6 +842,7 @@
         stopScreenShare();
     }
 }
+
 
 
         function stopScreenShare() {
