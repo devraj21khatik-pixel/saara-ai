@@ -78,7 +78,8 @@ jobs:
                               runOnUiThread(new Runnable() {
                                   @Override
                                   public void run() {
-                                      request.grant(request.resources);
+                                      // FIXED: getResources() method used instead of field
+                                      request.grant(request.getResources());
                                   }
                               });
                           }
@@ -102,7 +103,6 @@ jobs:
                   super.onActivityResult(requestCode, resultCode, data);
                   if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
                       if (resultCode == RESULT_OK && data != null) {
-                          // Jab user "Start now" click karega, tab yeh function web side ko notify karega
                           if (this.bridge != null && this.bridge.getWebView() != null) {
                               runOnUiThread(new Runnable() {
                                   @Override
