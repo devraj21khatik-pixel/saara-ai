@@ -1,0 +1,9 @@
+{
+  "appId": "com.saara.ai",
+  "appName": "Saara AI",
+  "webDir": "",
+  "server": {
+    "url": "https://saara-ai-lac.vercel.app/",
+    "cleartext": true
+  }
+}
