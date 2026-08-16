@@ -37,16 +37,86 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Add Required Permissions
+      - name: Add Required Permissions to Manifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Microphone
           sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />' $MANIFEST
-          # Floating Icon (System Overlay)
           sed -i '/<application/i \    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />' $MANIFEST
-          # Foreground Service (Needed for screen capturing and background work)
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' $MANIFEST
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />' $MANIFEST
+
+      - name: Setup MainActivity with Mic and MediaProjection Bridge
+        run: |
+          MAIN_ACTIVITY="android/app/src/main/java/com/saara/ai/MainActivity.java"
+          if [ -f "$MAIN_ACTIVITY" ]; then
+            cat << 'EOF' > $MAIN_ACTIVITY
+          package com.saara.ai;
+
+          import android.app.Activity;
+          import android.content.Intent;
+          import android.media.projection.MediaProjectionManager;
+          import android.os.Bundle;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebChromeClient;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              private static final int REQUEST_CODE_SCREEN_CAPTURE = 1000;
+              private MediaProjectionManager projectionManager;
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  
+                  projectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+
+                  if (this.bridge != null && this.bridge.getWebView() != null) {
+                      this.bridge.getWebView().setWebChromeClient(new WebChromeClient() {
+                          @Override
+                          public void onPermissionRequest(final PermissionRequest request) {
+                              runOnUiThread(new Runnable() {
+                                  @Override
+                                  public void run() {
+                                      request.grant(request.resources);
+                                  }
+                              });
+                          }
+                      });
+
+                      // Native Bridge to trigger MediaProjection Dialog from Web
+                      this.bridge.getWebView().addJavascriptInterface(new Object() {
+                          @JavascriptInterface
+                          public void requestScreenCapture() {
+                              if (projectionManager != null) {
+                                  Intent intent = projectionManager.createScreenCaptureIntent();
+                                  startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE);
+                              }
+                          }
+                      }, "AndroidBridge");
+                  }
+              }
+
+              @Override
+              public void onActivityResult(int requestCode, int resultCode, Intent data) {
+                  super.onActivityResult(requestCode, resultCode, data);
+                  if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
+                      if (resultCode == RESULT_OK && data != null) {
+                          // Jab user "Start now" click karega, tab yeh function web side ko notify karega
+                          if (this.bridge != null && this.bridge.getWebView() != null) {
+                              runOnUiThread(new Runnable() {
+                                  @Override
+                                  public void run() {
+                                      bridge.getWebView().evaluateJavascript("if(window.onScreenCaptureGranted) window.onScreenCaptureGranted();", null);
+                                  }
+                              });
+                          }
+                      }
+                  }
+              }
+          }
+          EOF
+          fi
 
       - name: Fix Kotlin Version Conflict
         run: |
@@ -56,7 +126,7 @@ jobs:
                   resolutionStrategy {
                       force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
                       force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+                      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
                   }
               }
           }" >> android/build.gradle
