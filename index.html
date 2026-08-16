@@ -806,28 +806,44 @@
         }
 
         async function toggleScreenShare() {
-            const preview = document.getElementById('screen-preview');
-            const shareBtn = document.getElementById('screen-share-btn');
+    const preview = document.getElementById('screen-preview'); 
+    const shareBtn = document.getElementById('screen-share-btn');
 
-            if (!screenStream) {
-                try {
-                    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-                    preview.srcObject = screenStream;
-                    preview.style.display = 'block';
-                    
-                    try { await preview.play(); } catch (e) {}
-
-                    shareBtn.classList.add('active');
-                    shareBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Share';
-
-                    screenStream.getVideoTracks()[0].onended = () => { stopScreenShare(); };
-                } catch (err) {
-                    console.log("Screen share error:", err);
-                }
-            } else {
-                stopScreenShare();
+    // 1. Agar Native Android App mein hain toh Native Bridge trigger karein
+    if (window.AndroidBridge && window.AndroidBridge.requestScreenCapture) {
+        window.AndroidBridge.requestScreenCapture();
+        
+        // Jab native system pop-up mein user "Start now" click karega
+        window.onScreenCaptureGranted = function() {
+            console.log("Native screen capture granted!");
+            if (shareBtn) {
+                shareBtn.classList.add('active');
             }
+            // Yahan aap apna streaming/canvas logic dal sakte hain
+        };
+        return;
+    }
+
+    // 2. Fallback: Agar standard Web Browser / PWA mein hain
+    if (!screenStream) {
+        try {
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            if (preview) {
+                preview.srcObject = screenStream;
+                preview.style.display = 'block';
+                try { await preview.play(); } catch (e) {}
+            }
+            if (shareBtn) {
+                shareBtn.classList.add('active');
+            }
+        } catch (err) {
+            console.log("Screen share error:", err);
         }
+    } else {
+        stopScreenShare();
+    }
+}
+
 
         function stopScreenShare() {
             if (screenStream) {
