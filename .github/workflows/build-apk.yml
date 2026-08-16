@@ -46,12 +46,11 @@ jobs:
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />' $MANIFEST
           sed -i '/<application/i \    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />' $MANIFEST
           
-          # Inject ScreenCastService into Manifest inside application tag
           sed -i 's/<application/\<application\>\n        <service android:name=".ScreenCastService" android:foregroundServiceType="mediaProjection" android:exported="false" \/>/' $MANIFEST
 
-      - name: Setup Native ScreenCastService and MainActivity Bridge
+      - name: Setup Native ScreenCastService and Fixed MainActivity Bridge
         run: |
-          # 1. Create ScreenCastService.java for True Native Background Casting
+          # 1. Create ScreenCastService.java
           SERVICE_FILE="android/app/src/main/java/com/saara/ai/ScreenCastService.java"
           mkdir -p android/app/src/main/java/com/saara/ai/
           cat << 'EOF' > $SERVICE_FILE
@@ -78,8 +77,8 @@ jobs:
               @Override
               public int onStartCommand(Intent intent, int flags, int startId) {
                   Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                          .setContentTitle("Saara AI is active")
-                          .setContentText("Screen casting and audio stream are live...")
+                          .setContentTitle("Saara AI")
+                          .setContentText("Screen casting is active")
                           .setSmallIcon(android.R.drawable.ic_menu_camera)
                           .setPriority(NotificationCompat.PRIORITY_HIGH)
                           .build();
@@ -97,7 +96,7 @@ jobs:
                   if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                       NotificationChannel serviceChannel = new NotificationChannel(
                               CHANNEL_ID,
-                              "Saara Screen Cast Service Channel",
+                              "Saara Screen Cast Channel",
                               NotificationManager.IMPORTANCE_HIGH
                       );
                       NotificationManager manager = getSystemService(NotificationManager.class);
@@ -109,7 +108,7 @@ jobs:
           }
           EOF
 
-          # 2. Update MainActivity.java with Native Bridges and Back Gesture Fix
+          # 2. Update MainActivity.java with proper Bridge Communication & Back Press
           MAIN_ACTIVITY="android/app/src/main/java/com/saara/ai/MainActivity.java"
           if [ -f "$MAIN_ACTIVITY" ]; then
             cat << 'EOF' > $MAIN_ACTIVITY
@@ -132,8 +131,6 @@ jobs:
               private static final int REQUEST_CODE_SCREEN_CAPTURE = 1000;
               private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
               private MediaProjectionManager projectionManager;
-              public static int screenCaptureResultCode = 0;
-              public static Intent screenCaptureIntent = null;
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
@@ -162,8 +159,13 @@ jobs:
                           @JavascriptInterface
                           public void requestScreenCapture() {
                               if (projectionManager != null) {
-                                  Intent intent = projectionManager.createScreenCaptureIntent();
-                                  startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE);
+                                  final Intent intent = projectionManager.createScreenCaptureIntent();
+                                  runOnUiThread(new Runnable() {
+                                      @Override
+                                      public void run() {
+                                          startActivityForResult(intent, REQUEST_CODE_SCREEN_CAPTURE);
+                                      }
+                                  });
                               }
                           }
                       }, "AndroidBridge");
@@ -184,10 +186,7 @@ jobs:
                   super.onActivityResult(requestCode, resultCode, data);
                   if (requestCode == REQUEST_CODE_SCREEN_CAPTURE) {
                       if (resultCode == RESULT_OK && data != null) {
-                          screenCaptureResultCode = resultCode;
-                          screenCaptureIntent = data;
-
-                          // Start Native Foreground Service to maintain live casting state
+                          // Start Foreground Service for active system notification indicator
                           Intent serviceIntent = new Intent(this, ScreenCastService.class);
                           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                               startForegroundService(serviceIntent);
@@ -195,11 +194,12 @@ jobs:
                               startService(serviceIntent);
                           }
 
+                          // Notify Web Frontend that permission is granted
                           if (this.bridge != null && this.bridge.getWebView() != null) {
                               runOnUiThread(new Runnable() {
                                   @Override
                                   public void run() {
-                                      bridge.getWebView().evaluateJavascript("if(window.onScreenCaptureGranted) window.onScreenCaptureGranted();", null);
+                                      bridge.getWebView().evaluateJavascript("if(window.onScreenCaptureGranted) { window.onScreenCaptureGranted(); }", null);
                                   }
                               });
                           }
