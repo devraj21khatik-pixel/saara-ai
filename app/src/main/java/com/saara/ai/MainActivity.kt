@@ -232,3 +232,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+// --- 7. YOUTUBE AUTOMATION (Direct Video Search & Play) ---
+@JavascriptInterface
+fun playOnYouTube(query: String) {
+    activity.runOnUiThread {
+        try {
+            // Native YouTube App Search Intent
+            val intent = Intent(Intent.ACTION_SEARCH).apply {
+                setPackage("com.google.android.youtube")
+                putExtra("query", query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: Agar YouTube App na ho toh Browser me khol do
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${URLEncoder.encode(query, "UTF-8")}")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(webIntent)
+        }
+    }
+}
+
+// --- 8. SPOTIFY AUTOMATION (Direct Song Search & Play) ---
+@JavascriptInterface
+fun playOnSpotify(query: String) {
+    activity.runOnUiThread {
+        try {
+            val intent = Intent(android.media.action.MEDIA_PLAY_FROM_SEARCH).apply {
+                setPackage("com.spotify.music")
+                putExtra(android.app.SearchManager.QUERY, query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(activity, "Spotify app nahi mila Sir", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
