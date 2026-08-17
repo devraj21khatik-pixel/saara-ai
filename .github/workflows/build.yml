@@ -2,36 +2,38 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
 
-    # NAYA STEP: Yahan hum GitHub ko sahi Gradle version (8.2) download karne ko bol rahe hain
-    - name: Generate Gradle Wrapper
-      run: gradle wrapper --gradle-version 8.2
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.2"
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper --gradle-version 8.2
 
-    # Ab hum safely ./gradlew se APK bana sakte hain
-        - name: Build APK (Debug)
-      run: ./gradlew assembleDebug --stacktrace --info
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
+      - name: Build APK
+        run: ./gradlew assembleDebug --stacktrace
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: Saara-AI-App
-        path: app/build/outputs/apk/debug/*.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saara-AI-App
+          path: app/build/outputs/apk/debug/*.apk
