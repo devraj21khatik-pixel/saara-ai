@@ -34,8 +34,8 @@ class MainActivity : AppCompatActivity() {
         
         @JavascriptInterface
         fun sendToSaara(prompt: String) {
-            // Yahan apna sahi Vercel URL daalein
-            val serverUrl = "https://your-vercel-backend-url.vercel.app/api/chat"
+            // Sahi Vercel Backend URL
+            val serverUrl = "https://saara-ai-lac.vercel.app/chat"
             
             ApiHelper.sendQueryToBackend(serverUrl, prompt) { result ->
                 // Clean response formatting for JavaScript
