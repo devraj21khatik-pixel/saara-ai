@@ -178,6 +178,113 @@ body {
     100% { height: 24px; background: #a855f7; }
 }
 
+/* ==========================================
+   Sci-Fi Central AI Core & Mystery Stars
+   ========================================== */
+.ai-core-container {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 12px auto 4px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 800px;
+    flex-shrink: 0;
+}
+
+/* Shimmering Mystery Stars Effect */
+.mystery-stars {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 242, 255, 0.25) 1px, transparent 1.5px);
+    background-size: 20px 20px;
+    animation: rotateStars 25s linear infinite;
+    opacity: 0.7;
+}
+
+@keyframes rotateStars {
+    from { transform: rotate(0deg) scale(0.9); }
+    to { transform: rotate(360deg) scale(1.1); }
+}
+
+/* Sci-Fi Rings around the Globe */
+.core-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px dashed rgba(0, 242, 255, 0.35);
+    pointer-events: none;
+}
+
+.outer-ring {
+    width: 170px;
+    height: 170px;
+    animation: spinClockwise 14s linear infinite;
+}
+
+.inner-ring {
+    width: 135px;
+    height: 135px;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    animation: spinCounterClockwise 9s linear infinite;
+}
+
+@keyframes spinClockwise {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes spinCounterClockwise {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+/* The Live Breathing Globe */
+.ai-globe {
+    position: relative;
+    width: 95px;
+    height: 95px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #00f2ff, #7000ff 70%, #000);
+    box-shadow: 0 0 35px rgba(0, 242, 255, 0.6), 0 0 70px rgba(112, 0, 255, 0.4);
+    animation: globeBreathe 3.5s infinite ease-in-out;
+    z-index: 2;
+    transition: all 0.5s ease;
+}
+
+.globe-inner-glow {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 60%);
+    animation: pulseInner 2s infinite alternate;
+}
+
+@keyframes pulseInner {
+    from { opacity: 0.3; }
+    to { opacity: 0.8; }
+}
+
+@keyframes globeBreathe {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 35px rgba(0, 242, 255, 0.6), 0 0 70px rgba(112, 0, 255, 0.4); }
+    50% { transform: scale(1.08); box-shadow: 0 0 55px rgba(0, 242, 255, 0.9), 0 0 95px rgba(112, 0, 255, 0.7); }
+}
+
+/* Dynamic State Classes for Globe */
+.ai-globe.thinking {
+    background: radial-gradient(circle at 35% 35%, #ff007f, #ff8c00 70%, #000) !important;
+    box-shadow: 0 0 45px rgba(255, 0, 127, 0.8), 0 0 85px rgba(255, 140, 0, 0.6) !important;
+    animation: globeBreathe 0.6s infinite ease-in-out !important;
+}
+
+.ai-globe.speaking {
+    background: radial-gradient(circle at 35% 35%, #00ff88, #00f2ff 70%, #000) !important;
+    box-shadow: 0 0 50px rgba(0, 255, 136, 0.8), 0 0 90px rgba(0, 242, 255, 0.6) !important;
+    animation: globeBreathe 1.2s infinite ease-in-out !important;
+}
+
 /* Chat Feed */
 .chat-feed {
     flex: 1;
