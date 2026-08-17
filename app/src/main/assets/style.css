@@ -9,7 +9,8 @@
 body {
     background-color: #080b11;
     color: #e2e8f0;
-    height: 100vh;
+    height: 100%;
+    min-height: 100dvh;
     display: flex;
     justify-content: center;
     overflow: hidden;
@@ -18,7 +19,7 @@ body {
 .app-container {
     width: 100%;
     max-width: 500px;
-    height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     background: radial-gradient(circle at top, #131b2e 0%, #080b11 100%);
@@ -83,7 +84,7 @@ body {
 
 @keyframes orbSpin {
     0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.15); }
+    50% { transform: rotate(180deg) scale(115%); }
     100% { transform: rotate(360deg) scale(1); }
 }
 
@@ -191,6 +192,7 @@ body {
     align-items: center;
     perspective: 800px;
     flex-shrink: 0;
+    transition: all 0.3s ease;
 }
 
 /* Shimmering Mystery Stars Effect */
@@ -487,3 +489,19 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* ==========================================
+   Keyboard Open / Mobile Viewport Fixes
+   ========================================== */
+.app-container.keyboard-active .ai-core-container {
+    display: none !important;
+}
+
+@media (max-height: 550px) {
+    .ai-core-container {
+        display: none !important;
+    }
+    .chat-feed {
+        padding: 10px;
+    }
+}
