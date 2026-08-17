@@ -12,6 +12,19 @@ const aiOrb = document.getElementById('aiOrb');
 const centralGlobe = document.getElementById('centralGlobe'); // Sci-Fi Central Globe
 const thinkingIndicator = document.getElementById('thinkingIndicator');
 const voiceWaveform = document.getElementById('voiceWaveform');
+const appContainer = document.querySelector('.app-container');
+
+// Keyboard Open / Close Listener (Input Box & Viewport Fix)
+if (userInput && appContainer) {
+    userInput.addEventListener('focus', () => {
+        appContainer.classList.add('keyboard-active');
+        setTimeout(scrollToBottom, 300);
+    });
+
+    userInput.addEventListener('blur', () => {
+        appContainer.classList.remove('keyboard-active');
+    });
+}
 
 // Initialize Web Speech Recognition
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
