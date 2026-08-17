@@ -27,8 +27,9 @@ jobs:
       run: chmod +x gradlew
 
     # Ab hum safely ./gradlew se APK bana sakte hain
-    - name: Build APK (Debug)
-      run: ./gradlew assembleDebug --stacktrace
+        - name: Build APK (Debug)
+      run: ./gradlew assembleDebug --stacktrace --info
+
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
