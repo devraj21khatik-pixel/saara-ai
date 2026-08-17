@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -237,7 +238,7 @@ class MainActivity : AppCompatActivity() {
         fun playOnSpotify(query: String) {
             activity.runOnUiThread {
                 try {
-                    val intent = Intent(android.media.action.MEDIA_PLAY_FROM_SEARCH).apply {
+                    val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
                         setPackage("com.spotify.music")
                         putExtra(SearchManager.QUERY, query)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
