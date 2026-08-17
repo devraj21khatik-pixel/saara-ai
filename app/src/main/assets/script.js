@@ -1,3 +1,4 @@
+// State Variables
 let isLiveMode = false;
 let isListening = false;
 let recognition = null;
@@ -9,24 +10,50 @@ const sendBtn = document.getElementById('sendBtn');
 const micBtn = document.getElementById('micBtn');
 const liveModeBtn = document.getElementById('liveModeBtn');
 const aiOrb = document.getElementById('aiOrb');
-const centralGlobe = document.getElementById('centralGlobe'); // Sci-Fi Central Globe
+const centralGlobe = document.getElementById('centralGlobe');
 const thinkingIndicator = document.getElementById('thinkingIndicator');
 const voiceWaveform = document.getElementById('voiceWaveform');
 const appContainer = document.querySelector('.app-container');
 
-// Keyboard Open / Close Listener (Input Box & Viewport Fix)
+/* ==========================================
+   1. Dynamic Viewport Height (WebView / Keyboard Fix)
+   ========================================== */
+function updateAppHeight() {
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
+}
+
+// Initial Set & Resize Listeners
+updateAppHeight();
+window.addEventListener('resize', updateAppHeight);
+window.addEventListener('orientationchange', updateAppHeight);
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        updateAppHeight();
+        scrollToBottom();
+    });
+}
+
+// Keyboard Active Listeners
 if (userInput && appContainer) {
     userInput.addEventListener('focus', () => {
         appContainer.classList.add('keyboard-active');
-        setTimeout(scrollToBottom, 300);
+        setTimeout(() => {
+            updateAppHeight();
+            scrollToBottom();
+        }, 200);
     });
 
     userInput.addEventListener('blur', () => {
         appContainer.classList.remove('keyboard-active');
+        setTimeout(updateAppHeight, 200);
     });
 }
 
-// Initialize Web Speech Recognition
+/* ==========================================
+   2. Web Speech Recognition Setup
+   ========================================== */
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -56,15 +83,23 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     };
 }
 
-// Event Listeners
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});
+/* ==========================================
+   3. Event Listeners
+   ========================================== */
+if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
-micBtn.addEventListener('click', toggleMic);
-liveModeBtn.addEventListener('click', toggleLiveVoice);
+if (userInput) {
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+}
 
+if (micBtn) micBtn.addEventListener('click', toggleMic);
+if (liveModeBtn) liveModeBtn.addEventListener('click', toggleLiveVoice);
+
+/* ==========================================
+   4. Mic & Voice Controls
+   ========================================== */
 function toggleMic() {
     if (!recognition) {
         alert("Voice recognition not supported in this WebView.");
@@ -79,14 +114,14 @@ function toggleMic() {
 
 function resetMicState() {
     isListening = false;
-    micBtn.classList.remove('listening');
+    if (micBtn) micBtn.classList.remove('listening');
     setOrbState('idle');
     if (voiceWaveform) voiceWaveform.classList.add('hidden');
 }
 
 function toggleLiveVoice() {
     isLiveMode = !isLiveMode;
-    liveModeBtn.classList.toggle('active', isLiveMode);
+    if (liveModeBtn) liveModeBtn.classList.toggle('active', isLiveMode);
     appendAssistantMessage(
         isLiveMode 
             ? "Live Voice Mode ON ho gaya hai Sir. Ab main aapko har jawaab bol kar doongi." 
@@ -95,23 +130,26 @@ function toggleLiveVoice() {
 }
 
 function triggerQuickAction(text) {
-    userInput.value = text;
+    if (userInput) userInput.value = text;
     sendMessage();
 }
 
+/* ==========================================
+   5. Messaging & Android Bridge Interactions
+   ========================================== */
 function sendMessage() {
-    const text = userInput.value.trim();
+    const text = userInput ? userInput.value.trim() : '';
     if (!text) return;
 
     appendUserMessage(text);
-    userInput.value = '';
+    if (userInput) userInput.value = '';
 
-    // Set UI States (Orb + Central Globe sync)
+    // UI States Sync
     setOrbState('thinking');
     if (thinkingIndicator) thinkingIndicator.classList.remove('hidden');
     scrollToBottom();
 
-    // System Intent Auto Detection (Screen Cast / App launch)
+    // System Intent Auto Detection (Screen Cast / Mirroring)
     const lowerText = text.toLowerCase();
     if (lowerText.includes('cast') || lowerText.includes('screen share') || lowerText.includes('mirror')) {
         if (window.AndroidBridge && typeof window.AndroidBridge.openScreenCast === 'function') {
@@ -119,11 +157,11 @@ function sendMessage() {
         }
     }
 
-    // Call Native Android Bridge
+    // Native Android Bridge Communication
     if (window.AndroidBridge && typeof window.AndroidBridge.sendToSaara === 'function') {
         window.AndroidBridge.sendToSaara(text, isLiveMode);
     } else {
-        // Local Fallback testing
+        // Local Fallback for Testing outside Android WebView
         setTimeout(() => {
             receiveFromSaara(JSON.stringify({
                 reply: "Arey Sir! Saara active hai. Bataiye Screen Cast kholna hai ya aur koi madad karun?",
@@ -133,7 +171,7 @@ function sendMessage() {
     }
 }
 
-// Callback Function called from Kotlin (`MainActivity.kt`)
+// Callback invoked by Native Kotlin (`MainActivity.kt`)
 function receiveFromSaara(responseString) {
     if (thinkingIndicator) thinkingIndicator.classList.add('hidden');
 
@@ -159,6 +197,9 @@ function receiveFromSaara(responseString) {
     scrollToBottom();
 }
 
+/* ==========================================
+   6. UI Rendering & Helpers
+   ========================================== */
 function appendUserMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user-msg';
@@ -169,19 +210,25 @@ function appendUserMessage(text) {
 function appendAssistantMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message assistant-msg';
+    
+    // Safely escape quotes for TTS onClick attribute
+    const safeSpeechText = text.replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, ' ');
+
     msgDiv.innerHTML = `
         <div class="avatar"><i class="fa-solid fa-sparkles"></i></div>
         <div class="msg-bubble">
             <div class="msg-text">${escapeHtml(text)}</div>
             <div class="msg-actions">
-                <button class="speaker-btn" onclick="speakText('${text.replace(/'/g, "\\'").replace(/\n/g, ' ')}')"><i class="fa-solid fa-volume-high"></i></button>
+                <button class="speaker-btn" onclick="speakText('${safeSpeechText}')">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
             </div>
         </div>
     `;
     chatFeed.appendChild(msgDiv);
 }
 
-// Dual Orb & Globe State Manager
+// Sync States for both Header Orb & Sci-Fi Central Globe
 function setOrbState(state) {
     if (aiOrb) aiOrb.className = `ai-orb ${state}`;
     if (centralGlobe) centralGlobe.className = `ai-globe ${state}`;
@@ -202,7 +249,7 @@ function playAudio(base64Data, mimeType) {
 
 function speakText(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop any ongoing speech
+        window.speechSynthesis.cancel(); // Stop active speech
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'hi-IN';
 
@@ -232,5 +279,7 @@ function escapeHtml(text) {
 }
 
 function scrollToBottom() {
-    chatFeed.scrollTop = chatFeed.scrollHeight;
+    if (chatFeed) {
+        chatFeed.scrollTop = chatFeed.scrollHeight;
+    }
 }
