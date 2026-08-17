@@ -160,7 +160,50 @@ function sendMessage() {
         }
     }
 
-    // B. WHATSAPP INTENT ("Rahul ko WhatsApp karo Hello")
+    // B. YOUTUBE PLAY INTENT ("YouTube par winning speech chalao / video dikhao")
+    if (lowerText.includes('youtube par') || lowerText.includes('youtube pe') || lowerText.includes('yt par') || lowerText.includes('yt pe')) {
+        let searchQuery = text
+            .replace(/youtube par/gi, '')
+            .replace(/youtube pe/gi, '')
+            .replace(/yt par/gi, '')
+            .replace(/yt pe/gi, '')
+            .replace(/chalao/gi, '')
+            .replace(/bajao/gi, '')
+            .replace(/search karo/gi, '')
+            .replace(/play karo/gi, '')
+            .replace(/dikhao/gi, '')
+            .replace(/video/gi, '')
+            .replace(/song/gi, '')
+            .trim();
+
+        if (searchQuery && window.AndroidBridge && typeof window.AndroidBridge.playOnYouTube === 'function') {
+            window.AndroidBridge.playOnYouTube(searchQuery);
+            receiveFromSaara(JSON.stringify({ reply: `YouTube par "${searchQuery}" chala rahi hoon Sir...` }));
+            return;
+        }
+    }
+
+    // C. SPOTIFY PLAY INTENT ("Spotify par Kesariya song bajao")
+    if (lowerText.includes('spotify par') || lowerText.includes('spotify pe')) {
+        let searchQuery = text
+            .replace(/spotify par/gi, '')
+            .replace(/spotify pe/gi, '')
+            .replace(/chalao/gi, '')
+            .replace(/bajao/gi, '')
+            .replace(/play karo/gi, '')
+            .replace(/song/gi, '')
+            .replace(/gaana/gi, '')
+            .replace(/music/gi, '')
+            .trim();
+
+        if (searchQuery && window.AndroidBridge && typeof window.AndroidBridge.playOnSpotify === 'function') {
+            window.AndroidBridge.playOnSpotify(searchQuery);
+            receiveFromSaara(JSON.stringify({ reply: `Spotify par "${searchQuery}" bajaa rahi hoon Sir...` }));
+            return;
+        }
+    }
+
+    // D. WHATSAPP INTENT ("Rahul ko WhatsApp karo Hello")
     if (lowerText.includes('whatsapp') || lowerText.includes('whats app') || lowerText.includes('what\'s app')) {
         const extracted = extractTargetAndMessage(text, ['whatsapp karo', 'whatsapp text', 'whatsapp message', 'whatsapp par', 'whatsapp']);
         if (window.AndroidBridge && typeof window.AndroidBridge.sendWhatsApp === 'function') {
@@ -170,7 +213,7 @@ function sendMessage() {
         }
     }
 
-    // C. PHONE CALL INTENT ("Rahul ko call karo" / "Call 9876543210")
+    // E. PHONE CALL INTENT ("Rahul ko call karo" / "Call 9876543210")
     if (lowerText.includes('call karo') || lowerText.includes('call lagao') || lowerText.includes('phone karo') || lowerText.startsWith('call ')) {
         let target = text
             .replace(/call karo/gi, '')
@@ -188,7 +231,7 @@ function sendMessage() {
         }
     }
 
-    // D. SMS INTENT ("Rahul ko message karo Aaj sham aana")
+    // F. SMS INTENT ("Rahul ko message karo Aaj sham aana")
     if (lowerText.includes('message karo') || lowerText.includes('sms karo') || lowerText.includes('text karo')) {
         const extracted = extractTargetAndMessage(text, ['message karo', 'sms karo', 'text karo', 'message', 'sms']);
         if (window.AndroidBridge && typeof window.AndroidBridge.sendSMS === 'function') {
@@ -198,7 +241,7 @@ function sendMessage() {
         }
     }
 
-    // E. APP OPENING INTENT ("YouTube kholo" / "Open Instagram")
+    // G. APP OPENING INTENT ("YouTube kholo" / "Open Instagram")
     if (lowerText.includes('kholo') || lowerText.includes('open') || lowerText.includes('khol do')) {
         let appName = text
             .replace(/kholo/gi, '')
@@ -214,14 +257,14 @@ function sendMessage() {
         }
     }
 
-    // F. DEFAULT SERVER API FALLBACK
+    // H. DEFAULT SERVER API FALLBACK
     if (window.AndroidBridge && typeof window.AndroidBridge.sendToSaara === 'function') {
         window.AndroidBridge.sendToSaara(text, isLiveMode);
     } else {
         // Local Fallback for Browser Testing outside Android WebView
         setTimeout(() => {
             receiveFromSaara(JSON.stringify({
-                reply: "Arey Sir! Saara active hai. Bataiye Screen Cast, Calls, WhatsApp ya Application kholna hai?",
+                reply: "Arey Sir! Saara active hai. Bataiye Screen Cast, Calls, WhatsApp, Media or Apps kholna hai?",
                 audio: null
             }));
         }, 1200);
