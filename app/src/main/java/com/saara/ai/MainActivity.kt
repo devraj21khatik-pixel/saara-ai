@@ -1,63 +1,51 @@
 package com.saara.ai
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var webView: WebView
+
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // UI Layout programmatic taur par bana rahe hain
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 40, 40, 40)
+        webView = WebView(this).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            webViewClient = WebViewClient()
+            
+            // JavaScript ko Kotlin se connect karna
+            addJavascriptInterface(WebAppInterface(this@MainActivity, this), "AndroidBridge")
         }
 
-        val titleView = TextView(this).apply {
-            text = "Saara AI Native Assistant"
-            textSize = 22f
-            setPadding(0, 0, 0, 20)
-        }
-        layout.addView(titleView)
+        // Local HTML UI load karna
+        webView.loadUrl("file:///android_asset/index.html")
+        setContentView(webView)
+    }
 
-        val inputField = EditText(this).apply {
-            hint = "Saara se kuch poochhein..."
-            setPadding(20, 20, 20, 20)
-        }
-        layout.addView(inputField)
-
-        val submitButton = Button(this).apply {
-            text = "Send to Saara"
-        }
-        layout.addView(submitButton)
-
-        val responseView = TextView(this).apply {
-            text = "Response yahan dikhega..."
-            textSize = 16f
-            setPadding(0, 30, 0, 0)
-        }
-        layout.addView(responseView)
-
-        submitButton.setOnClickListener {
-            val prompt = inputField.text.toString()
-            if (prompt.isNotBlank()) {
-                responseView.text = "Soch rahi hoon..."
+    class WebAppInterface(private val mContext: Context, private val webView: WebView) {
+        
+        @JavascriptInterface
+        fun sendToSaara(prompt: String) {
+            // Yahan apna sahi Vercel URL daalein
+            val serverUrl = "https://your-vercel-backend-url.vercel.app/api/chat"
+            
+            ApiHelper.sendQueryToBackend(serverUrl, prompt) { result ->
+                // Clean response formatting for JavaScript
+                val safeResult = result.replace("'", "\\'").replace("\n", "\\n")
                 
-                // Yahan apna Vercel backend ka URL daalein
-                val serverUrl = "https://your-vercel-backend-url.vercel.app/api/chat"
-                
-                ApiHelper.sendQueryToBackend(serverUrl, prompt) { result ->
-                    runOnUiThread {
-                        responseView.text = result
-                    }
+                // Response wapas HTML UI (`script.js`) mein bhej rahe hain
+                webView.post {
+                    webView.evaluateJavascript("receiveFromSaara('$safeResult')", null)
                 }
             }
         }
-
-        setContentView(layout)
     }
 }
