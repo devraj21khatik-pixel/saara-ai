@@ -8,7 +8,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object ApiHelper {
-    fun sendQueryToBackend(serverUrl: String, prompt: String, callback: (String) -> Unit) {
+    fun sendQueryToBackend(
+        serverUrl: String, 
+        prompt: String, 
+        isLive: Boolean = false, 
+        callback: (String) -> Unit
+    ) {
         Thread {
             try {
                 val url = URL(serverUrl)
@@ -18,10 +23,10 @@ object ApiHelper {
                 connection.setRequestProperty("Accept", "application/json")
                 connection.doOutput = true
 
-                // Backend app.py "message" key expect karta hai
+                // Backend app.py "message" aur dynamic "is_live" key expect karta hai
                 val jsonInput = JSONObject().apply {
                     put("message", prompt)
-                    put("is_live", false)
+                    put("is_live", isLive)
                 }
                 
                 connection.outputStream.use { os ->
