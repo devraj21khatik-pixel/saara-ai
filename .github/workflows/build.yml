@@ -18,9 +18,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # Note: Humne gradlew ki jagah direct gradle use kiya hai kyunki Acode me gradlew file nahi hai
+    # NAYA STEP: Yahan hum GitHub ko sahi Gradle version (8.2) download karne ko bol rahe hain
+    - name: Generate Gradle Wrapper
+      run: gradle wrapper --gradle-version 8.2
+
+    # Wrapper ko run karne ki permission de rahe hain
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    # Ab hum safely ./gradlew se APK bana sakte hain
     - name: Build APK (Debug)
-      run: gradle assembleDebug
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
