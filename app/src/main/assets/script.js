@@ -9,6 +9,7 @@ const sendBtn = document.getElementById('sendBtn');
 const micBtn = document.getElementById('micBtn');
 const liveModeBtn = document.getElementById('liveModeBtn');
 const aiOrb = document.getElementById('aiOrb');
+const centralGlobe = document.getElementById('centralGlobe'); // Sci-Fi Central Globe
 const thinkingIndicator = document.getElementById('thinkingIndicator');
 const voiceWaveform = document.getElementById('voiceWaveform');
 
@@ -24,7 +25,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         isListening = true;
         micBtn.classList.add('listening');
         setOrbState('speaking');
-        voiceWaveform.classList.remove('hidden');
+        if (voiceWaveform) voiceWaveform.classList.remove('hidden');
     };
 
     recognition.onresult = (event) => {
@@ -67,7 +68,7 @@ function resetMicState() {
     isListening = false;
     micBtn.classList.remove('listening');
     setOrbState('idle');
-    voiceWaveform.classList.add('hidden');
+    if (voiceWaveform) voiceWaveform.classList.add('hidden');
 }
 
 function toggleLiveVoice() {
@@ -92,9 +93,9 @@ function sendMessage() {
     appendUserMessage(text);
     userInput.value = '';
 
-    // Set UI States
+    // Set UI States (Orb + Central Globe sync)
     setOrbState('thinking');
-    thinkingIndicator.classList.remove('hidden');
+    if (thinkingIndicator) thinkingIndicator.classList.remove('hidden');
     scrollToBottom();
 
     // System Intent Auto Detection (Screen Cast / App launch)
@@ -121,8 +122,7 @@ function sendMessage() {
 
 // Callback Function called from Kotlin (`MainActivity.kt`)
 function receiveFromSaara(responseString) {
-    thinkingIndicator.classList.add('hidden');
-    setOrbState('idle');
+    if (thinkingIndicator) thinkingIndicator.classList.add('hidden');
 
     try {
         const data = typeof responseString === 'string' ? JSON.parse(responseString) : responseString;
@@ -132,9 +132,15 @@ function receiveFromSaara(responseString) {
         // Play Server Audio if present
         if (data.audio) {
             playAudio(data.audio, data.mimeType || 'audio/wav');
+        } else {
+            setOrbState('idle');
+            if (isLiveMode) {
+                speakText(data.reply);
+            }
         }
     } catch (e) {
         appendAssistantMessage(responseString);
+        setOrbState('idle');
     }
 
     scrollToBottom();
@@ -143,7 +149,7 @@ function receiveFromSaara(responseString) {
 function appendUserMessage(text) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'message user-msg';
-    msgDiv.innerHTML = `<div class="msg-bubble">${text}</div>`;
+    msgDiv.innerHTML = `<div class="msg-bubble">${escapeHtml(text)}</div>`;
     chatFeed.appendChild(msgDiv);
 }
 
@@ -153,38 +159,63 @@ function appendAssistantMessage(text) {
     msgDiv.innerHTML = `
         <div class="avatar"><i class="fa-solid fa-sparkles"></i></div>
         <div class="msg-bubble">
-            <div class="msg-text">${text}</div>
+            <div class="msg-text">${escapeHtml(text)}</div>
             <div class="msg-actions">
-                <button class="speaker-btn" onclick="speakText('${text.replace(/'/g, "\\'")}')"><i class="fa-solid fa-volume-high"></i></button>
+                <button class="speaker-btn" onclick="speakText('${text.replace(/'/g, "\\'").replace(/\n/g, ' ')}')"><i class="fa-solid fa-volume-high"></i></button>
             </div>
         </div>
     `;
     chatFeed.appendChild(msgDiv);
 }
 
+// Dual Orb & Globe State Manager
 function setOrbState(state) {
-    aiOrb.className = `ai-orb ${state}`;
+    if (aiOrb) aiOrb.className = `ai-orb ${state}`;
+    if (centralGlobe) centralGlobe.className = `ai-globe ${state}`;
 }
 
 function playAudio(base64Data, mimeType) {
     setOrbState('speaking');
-    voiceWaveform.classList.remove('hidden');
+    if (voiceWaveform) voiceWaveform.classList.remove('hidden');
     
     const audio = new Audio(`data:${mimeType};base64,${base64Data}`);
     audio.play().catch(err => console.log("Audio play error:", err));
     
     audio.onended = () => {
         setOrbState('idle');
-        voiceWaveform.classList.add('hidden');
+        if (voiceWaveform) voiceWaveform.classList.add('hidden');
     };
 }
 
 function speakText(text) {
     if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any ongoing speech
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'hi-IN';
+
+        utterance.onstart = () => {
+            setOrbState('speaking');
+            if (voiceWaveform) voiceWaveform.classList.remove('hidden');
+        };
+
+        utterance.onend = () => {
+            setOrbState('idle');
+            if (voiceWaveform) voiceWaveform.classList.add('hidden');
+        };
+
+        utterance.onerror = () => {
+            setOrbState('idle');
+            if (voiceWaveform) voiceWaveform.classList.add('hidden');
+        };
+
         window.speechSynthesis.speak(utterance);
     }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
 }
 
 function scrollToBottom() {
