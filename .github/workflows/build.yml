@@ -22,7 +22,6 @@ jobs:
     - name: Generate Gradle Wrapper
       run: gradle wrapper --gradle-version 8.2
 
-    # Wrapper ko run karne ki permission de rahe hain
     - name: Make gradlew executable
       run: chmod +x gradlew
 
