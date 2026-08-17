@@ -1,34 +1,83 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saara AI</title>
+    <title>Saara AI - System Assistant</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <header class="app-header">
-        <div class="header-content">
-            <div class="avatar">S</div>
-            <div class="info">
-                <h1>Saara AI</h1>
-                <span class="status">System Native Assistant</span>
+    <div class="app-container">
+        <!-- Header with Glowing AI Orb -->
+        <header class="app-header">
+            <div class="assistant-branding">
+                <div class="orb-container">
+                    <div id="aiOrb" class="ai-orb idle"></div>
+                </div>
+                <div class="assistant-details">
+                    <h1>Saara AI <span class="badge">NATIVE</span></h1>
+                    <p id="systemStatus"><span class="pulse-dot"></span> System Assistant Active</p>
+                </div>
             </div>
-        </div>
-    </header>
-    
-    <main id="chat-container">
-        <div class="message saara">
-            <p>Namaste! Main Saara hoon. Aapki native AI assistant. Bataiye, kya karna hai?</p>
-        </div>
-    </main>
+            <div class="header-controls">
+                <button id="liveModeBtn" class="control-btn" title="Toggle Live Voice Mode">
+                    <i class="fa-solid fa-wave-square"></i>
+                </button>
+            </div>
+        </header>
 
-    <footer class="input-area">
-        <input type="text" id="user-input" placeholder="Message Saara..." autocomplete="off">
-        <button id="send-btn">
-            <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
-        </button>
-    </footer>
+        <!-- Voice Wave Visualizer (Appears during speech) -->
+        <div id="voiceWaveform" class="waveform-container hidden">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <!-- Chat Feed Area -->
+        <main id="chatFeed" class="chat-feed">
+            <div class="message assistant-msg">
+                <div class="avatar"><i class="fa-solid fa-sparkles"></i></div>
+                <div class="msg-bubble">
+                    <div class="msg-text">Namaste Sir! Main Saara hoon, aapki native AI assistant. Bataiye aaj kya karna hai?</div>
+                    <div class="msg-actions">
+                        <button class="speaker-btn" onclick="replayAudio('Namaste Sir! Main Saara hoon')"><i class="fa-solid fa-volume-high"></i></button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Typing / Thinking State Indicator -->
+        <div id="thinkingIndicator" class="thinking-state hidden">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <span id="thinkingText">Saara is processing...</span>
+        </div>
+
+        <!-- Quick Action Chips for Instant System Commands -->
+        <div class="action-chips">
+            <button class="chip" onclick="triggerQuickAction('Screen cast open karo')">
+                <i class="fa-solid fa-tv"></i> Cast Screen
+            </button>
+            <button class="chip" onclick="triggerQuickAction('Kaisa chal raha hai sab?')">
+                <i class="fa-solid fa-comments"></i> Quick Chat
+            </button>
+            <button class="chip" onclick="toggleLiveVoice()">
+                <i class="fa-solid fa-microphone-lines"></i> Live Voice
+            </button>
+        </div>
+
+        <!-- Input Control Panel -->
+        <footer class="input-panel">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Ask Saara or give a command..." autocomplete="off">
+                <button id="micBtn" class="action-btn mic-btn" title="Voice Input">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <button id="sendBtn" class="action-btn send-btn" title="Send Message">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
 
     <script src="script.js"></script>
 </body>
