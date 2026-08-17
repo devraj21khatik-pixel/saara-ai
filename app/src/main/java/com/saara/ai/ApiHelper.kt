@@ -1,6 +1,7 @@
 package com.saara.ai
 
 import android.util.Log
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -17,10 +18,14 @@ object ApiHelper {
                 connection.setRequestProperty("Accept", "application/json")
                 connection.doOutput = true
 
-                val jsonInputString = "{\"prompt\": \"$prompt\"}"
+                // Backend app.py "message" key expect karta hai
+                val jsonInput = JSONObject().apply {
+                    put("message", prompt)
+                    put("is_live", false)
+                }
                 
                 connection.outputStream.use { os ->
-                    val input = jsonInputString.toByteArray(Charsets.UTF_8)
+                    val input = jsonInput.toString().toByteArray(Charsets.UTF_8)
                     os.write(input, 0, input.size)
                 }
 
@@ -32,7 +37,11 @@ object ApiHelper {
                     while (br.readLine().also { responseLine = it } != null) {
                         response.append(responseLine?.trim())
                     }
-                    callback(response.toString())
+                    
+                    // JSON Response parse karke clean 'reply' extract karna
+                    val jsonResponse = JSONObject(response.toString())
+                    val reply = jsonResponse.optString("reply", "No response from Saara")
+                    callback(reply)
                 } else {
                     callback("Error: Server returned HTTP code $responseCode")
                 }
