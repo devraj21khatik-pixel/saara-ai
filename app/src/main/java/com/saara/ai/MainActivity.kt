@@ -1,7 +1,6 @@
 package com.saara.ai
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,39 +10,66 @@ import android.os.Bundle
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
-import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.net.URLEncoder
+import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
-    private lateinit var webView: WebView
+    private lateinit var tvResponse: TextView
+    private lateinit var etInput: EditText
+    private lateinit var btnMic: ImageButton
+    private lateinit var btnSend: Button
+    private lateinit var chatScroll: ScrollView
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var textToSpeech: TextToSpeech? = null
+    private var chatHistory = StringBuilder("Namaste Sir! Main Saara hoon. Bataiye main aapki kya madad kar sakti hoon?\n\n")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        // 1. Request All Required Permissions (Audio, Contacts, Call, SMS)
+        // Initialize UI Elements
+        tvResponse = findViewById(R.id.tvResponse)
+        etInput = findViewById(R.id.etInput)
+        btnMic = findViewById(R.id.btnMic)
+        btnSend = findViewById(R.id.btnSend)
+        chatScroll = findViewById(R.id.chatScroll)
+
+        // Request Permissions
         checkAndRequestPermissions()
 
-        // 2. Initialize & Configure WebView
-        webView = WebView(this).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = false // Auto audio playback enable karne ke liye
-            webViewClient = WebViewClient()
-            
-            // Connect JavaScript Bridge Interface
-            addJavascriptInterface(WebAppInterface(this@MainActivity, this), "AndroidBridge")
+        // Initialize Native Speech Recognizer & TTS
+        initSpeechRecognizer()
+        textToSpeech = TextToSpeech(this, this)
+
+        // Mic Button Logic
+        btnMic.setOnClickListener {
+            startVoiceRecognition()
         }
 
-        webView.loadUrl("file:///android_asset/index.html")
-        setContentView(webView)
+        // Send Button Logic
+        btnSend.setOnClickListener {
+            val query = etInput.text.toString().trim()
+            if (query.isNotEmpty()) {
+                appendChat("Aap: $query")
+                processQuery(query)
+                etInput.setText("")
+            }
+        }
     }
 
     private fun checkAndRequestPermissions() {
@@ -59,220 +85,237 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (missingPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                missingPermissions.toTypedArray(),
-                101
-            )
+            ActivityCompat.requestPermissions(this, missingPermissions.toTypedArray(), 101)
         }
     }
 
-    class WebAppInterface(private val activity: MainActivity, private val webView: WebView) {
-        
-        // --- 1. BACKEND API COMMUNICATION ---
-        @JavascriptInterface
-        fun sendToSaara(prompt: String, isLive: Boolean) {
-            val serverUrl = "https://saara-ai-lac.vercel.app/chat"
-            
-            ApiHelper.sendQueryToBackend(serverUrl, prompt, isLive) { result ->
-                val safeResult = result.replace("'", "\\'").replace("\n", "\\n")
-                
-                webView.post {
-                    webView.evaluateJavascript("receiveFromSaara('$safeResult')", null)
+    private fun initSpeechRecognizer() {
+        if (SpeechRecognizer.isRecognitionAvailable(this)) {
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    etInput.hint = "Sun rahi hoon..."
                 }
-            }
-        }
-
-        // --- 2. SCREEN CAST & FLOATING OVERLAY ---
-        @JavascriptInterface
-        fun openScreenCast() {
-            activity.runOnUiThread {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(activity)) {
-                    Toast.makeText(activity, "Please grant Overlay permission for Floating Icon", Toast.LENGTH_LONG).show()
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${activity.packageName}")
-                    )
-                    activity.startActivity(intent)
-                    return@runOnUiThread
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {
+                    etInput.hint = "Message likhein..."
                 }
-
-                val serviceIntent = Intent(activity, FloatingWidgetService::class.java)
-                activity.startService(serviceIntent)
-
-                try {
-                    val intent = Intent("android.settings.CAST_SETTINGS")
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    activity.startActivity(intent)
-                } catch (e: Exception) {
-                    try {
-                        val intent = Intent("android.settings.WIFI_DISPLAY_SETTINGS")
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        activity.startActivity(intent)
-                    } catch (ex: Exception) {
-                        Toast.makeText(activity, "Screen Cast settings missing on this device", Toast.LENGTH_SHORT).show()
+                override fun onError(error: Int) {
+                    Toast.makeText(this@MainActivity, "Aawaaz samajh nahi aayi, phir try karein", Toast.LENGTH_SHORT).show()
+                    etInput.hint = "Message likhein..."
+                }
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    if (!matches.isNullOrEmpty()) {
+                        val spokenText = matches[0]
+                        appendChat("Aap (Voice): $spokenText")
+                        processQuery(spokenText)
                     }
                 }
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+        } else {
+            Toast.makeText(this, "Speech recognition is device par support nahi karta", Toast.LENGTH_LONG).show()
+        }
+    }
 
-                activity.moveTaskToBack(true)
+    private fun startVoiceRecognition() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            checkAndRequestPermissions()
+            return
+        }
+        textToSpeech?.stop() // Stop speaking if user taps mic
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN") // Default to Hindi-India
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Boliye Sir...")
+        }
+        speechRecognizer?.startListening(intent)
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            // Using default TTS model, no changes to your AI logic
+            val result = textToSpeech?.setLanguage(Locale("hi", "IN"))
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TTS", "Language not supported")
             }
         }
+    }
 
-        // --- 3. ANY APP LAUNCHER ---
-        @JavascriptInterface
-        fun openApp(appName: String) {
-            activity.runOnUiThread {
-                val pm = activity.packageManager
-                val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                var appFound = false
+    private fun speakOut(text: String) {
+        textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "")
+    }
 
-                for (app in packages) {
-                    val label = pm.getApplicationLabel(app).toString()
-                    if (label.contains(appName, ignoreCase = true)) {
-                        val launchIntent = pm.getLaunchIntentForPackage(app.packageName)
-                        if (launchIntent != null) {
-                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            activity.startActivity(launchIntent)
-                            appFound = true
-                            break
+    private fun appendChat(text: String) {
+        chatHistory.append(text).append("\n\n")
+        tvResponse.text = chatHistory.toString()
+        chatScroll.post { chatScroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    // ---------------- LOGIC ROUTING ----------------
+    private fun processQuery(query: String) {
+        val lowerQuery = query.lowercase()
+
+        when {
+            lowerQuery.contains("open screencast") || lowerQuery.contains("cast screen") -> {
+                appendChat("Saara: Screen cast khol rahi hoon Sir.")
+                speakOut("Screen cast khol rahi hoon Sir.")
+                openScreenCast()
+            }
+            lowerQuery.contains("play") && lowerQuery.contains("youtube") -> {
+                val song = query.replace("play", "", true).replace("on youtube", "", true).replace("youtube", "", true).trim()
+                appendChat("Saara: YouTube par '$song' play kar rahi hoon.")
+                speakOut("YouTube par $song play kar rahi hoon.")
+                playOnYouTube(song)
+            }
+            lowerQuery.contains("play") && lowerQuery.contains("spotify") -> {
+                val song = query.replace("play", "", true).replace("on spotify", "", true).replace("spotify", "", true).trim()
+                appendChat("Saara: Spotify par '$song' play kar rahi hoon.")
+                speakOut("Spotify par $song play kar rahi hoon.")
+                playOnSpotify(song)
+            }
+            lowerQuery.startsWith("open ") -> {
+                val appName = query.replace("open ", "", true).trim()
+                appendChat("Saara: '$appName' open kar rahi hoon.")
+                speakOut("$appName open kar rahi hoon.")
+                openApp(appName)
+            }
+            lowerQuery.startsWith("call ") -> {
+                val target = query.replace("call ", "", true).trim()
+                appendChat("Saara: '$target' ko call laga rahi hoon.")
+                speakOut("$target ko call laga rahi hoon.")
+                makeCall(target)
+            }
+            else -> {
+                // Backend call (App.py AI Logic remains exactly the same)
+                appendChat("Saara: (Thinking...)")
+                val serverUrl = "https://saara-ai-lac.vercel.app/chat"
+                ApiHelper.sendQueryToBackend(serverUrl, query, isLive = false) { reply ->
+                    runOnUiThread {
+                        // Remove "Thinking..." and append real response
+                        val lastIndex = chatHistory.lastIndexOf("Saara: (Thinking...)")
+                        if (lastIndex != -1) {
+                            chatHistory.delete(lastIndex, chatHistory.length)
                         }
+                        appendChat("Saara: $reply")
+                        speakOut(reply)
                     }
-                }
-
-                if (!appFound) {
-                    Toast.makeText(activity, "$appName app nahi mila Sir", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+    }
 
-        // --- 4. PHONE CALL HANDLER ---
-        @JavascriptInterface
-        fun makeCall(query: String) {
-            activity.runOnUiThread {
-                val number = getPhoneNumberFromContact(query) ?: query.replace(Regex("[^0-9+]"), "")
-                if (number.isNotEmpty()) {
-                    try {
-                        val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$number")).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        activity.startActivity(intent)
-                    } catch (e: Exception) {
-                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        activity.startActivity(dialIntent)
-                    }
-                } else {
-                    Toast.makeText(activity, "$query ka Contact nahi mila", Toast.LENGTH_SHORT).show()
+    // ---------------- NATIVE SYSTEM INTENTS ----------------
+
+    private fun openScreenCast() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Please grant Overlay permission", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            return
+        }
+        try {
+            startService(Intent(this, FloatingWidgetService::class.java))
+        } catch (e: Exception) {}
+
+        try {
+            val intent = Intent("android.settings.CAST_SETTINGS").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = Intent("android.settings.WIFI_DISPLAY_SETTINGS").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                startActivity(intent)
+            } catch (ex: Exception) {
+                Toast.makeText(this, "Screen Cast settings not found", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun playOnYouTube(query: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SEARCH).apply {
+                setPackage("com.google.android.youtube")
+                putExtra("query", query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${URLEncoder.encode(query, "UTF-8")}"))
+            startActivity(webIntent)
+        }
+    }
+
+    private fun playOnSpotify(query: String) {
+        try {
+            val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                setPackage("com.spotify.music")
+                putExtra(SearchManager.QUERY, query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Spotify app nahi mila", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun openApp(appName: String) {
+        val pm = packageManager
+        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        var appFound = false
+        for (app in packages) {
+            val label = pm.getApplicationLabel(app).toString()
+            if (label.contains(appName, ignoreCase = true)) {
+                val launchIntent = pm.getLaunchIntentForPackage(app.packageName)?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                if (launchIntent != null) {
+                    startActivity(launchIntent)
+                    appFound = true
+                    break
                 }
             }
         }
+        if (!appFound) Toast.makeText(this, "$appName nahi mila", Toast.LENGTH_SHORT).show()
+    }
 
-        // --- 5. SMS HANDLER ---
-        @JavascriptInterface
-        fun sendSMS(query: String, message: String) {
-            activity.runOnUiThread {
-                val number = getPhoneNumberFromContact(query) ?: query.replace(Regex("[^0-9+]"), "")
-                if (number.isNotEmpty()) {
-                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$number")).apply {
-                        putExtra("sms_body", message)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    activity.startActivity(intent)
-                } else {
-                    Toast.makeText(activity, "$query ka Contact nahi mila", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        // --- 6. WHATSAPP HANDLER ---
-        @JavascriptInterface
-        fun sendWhatsApp(query: String, message: String) {
-            activity.runOnUiThread {
-                val rawNumber = getPhoneNumberFromContact(query) ?: query.replace(Regex("[^0-9]"), "")
-                val formattedNumber = if (rawNumber.length == 10) "91$rawNumber" else rawNumber
-
-                if (formattedNumber.isNotEmpty()) {
-                    try {
-                        val url = "https://api.whatsapp.com/send?phone=$formattedNumber&text=${URLEncoder.encode(message, "UTF-8")}"
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        activity.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(activity, "WhatsApp open nahi ho saka", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    Toast.makeText(activity, "$query ka Number nahi mila", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        // --- 7. YOUTUBE AUTOMATION (Direct Video Search & Play) ---
-        @JavascriptInterface
-        fun playOnYouTube(query: String) {
-            activity.runOnUiThread {
-                try {
-                    // Native YouTube App Search Intent
-                    val intent = Intent(Intent.ACTION_SEARCH).apply {
-                        setPackage("com.google.android.youtube")
-                        putExtra("query", query)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    activity.startActivity(intent)
-                } catch (e: Exception) {
-                    // Fallback: Agar YouTube App na ho toh Browser me khol do
-                    val webIntent = Intent(
-                        Intent.ACTION_VIEW, 
-                        Uri.parse("https://www.youtube.com/results?search_query=${URLEncoder.encode(query, "UTF-8")}")
-                    ).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    activity.startActivity(webIntent)
-                }
-            }
-        }
-
-        // --- 8. SPOTIFY AUTOMATION (Direct Song Search & Play) ---
-        @JavascriptInterface
-        fun playOnSpotify(query: String) {
-            activity.runOnUiThread {
-                try {
-                    val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
-                        setPackage("com.spotify.music")
-                        putExtra(SearchManager.QUERY, query)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
-                    activity.startActivity(intent)
-                } catch (e: Exception) {
-                    Toast.makeText(activity, "Spotify app nahi mila Sir", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-
-        // --- HELPER: SEARCH PHONE NUMBER FROM CONTACTS ---
-        private fun getPhoneNumberFromContact(name: String): String? {
-            return try {
-                val cursor = activity.contentResolver.query(
-                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
-                    arrayOf("%$name%"),
-                    null
-                )
-                var number: String? = null
-                cursor?.use {
-                    if (it.moveToFirst()) {
-                        val index = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                        if (index != -1) {
-                            number = it.getString(index)
-                        }
-                    }
-                }
-                number
+    private fun makeCall(query: String) {
+        val number = getPhoneNumberFromContact(query) ?: query.replace(Regex("[^0-9+]"), "")
+        if (number.isNotEmpty()) {
+            try {
+                startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
             } catch (e: Exception) {
-                null
+                startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
             }
+        } else {
+            Toast.makeText(this, "Contact nahi mila", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun getPhoneNumberFromContact(name: String): String? {
+        return try {
+            val cursor = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+                arrayOf("%$name%"),
+                null
+            )
+            var number: String? = null
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val index = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    if (index != -1) number = it.getString(index)
+                }
+            }
+            number
+        } catch (e: Exception) { null }
+    }
+
+    override fun onDestroy() {
+        speechRecognizer?.destroy()
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        super.onDestroy()
     }
 }
