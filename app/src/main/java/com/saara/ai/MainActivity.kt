@@ -1,4 +1,4 @@
-package com.saara.ai // Agar aapka package name alag hai, toh ise apne hisaab se change kar lena
+package com.saara.ai
 
 import android.Manifest
 import android.app.SearchManager
@@ -7,9 +7,11 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.provider.MediaStore
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -39,6 +41,8 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private var isLiveVoiceMode = false
+    
+    private val OVERLAY_PERMISSION_CODE = 2084
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,9 +74,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             openScreenCast()
         }
 
+        // Quick Chat button ab Floating Bubble trigger karega
         btnQuickChat.setOnClickListener {
-            etInput.requestFocus()
-            Toast.makeText(this, "Quick Chat Ready", Toast.LENGTH_SHORT).show()
+            checkOverlayPermissionAndStart()
         }
 
         btnLiveVoice.setOnClickListener {
@@ -101,6 +105,31 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 addChatBubble(query, true)
                 processQuery(query)
                 etInput.setText("")
+            }
+        }
+    }
+
+    // --- FLOATING OVERLAY PERMISSION & START LOGIC ---
+    private fun checkOverlayPermissionAndStart() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivityForResult(intent, OVERLAY_PERMISSION_CODE)
+            Toast.makeText(this, "Pehle Overlay Permission allow karein", Toast.LENGTH_SHORT).show()
+        } else {
+            startService(Intent(this, SaaraFloatingService::class.java))
+            addChatBubble("Floating Saara active ho gayi hai!", false)
+            speakOut("Floating Saara active ho gayi hai.")
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OVERLAY_PERMISSION_CODE) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                startService(Intent(this, SaaraFloatingService::class.java))
+                addChatBubble("Floating Saara active ho gayi hai!", false)
+            } else {
+                Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show()
             }
         }
     }
