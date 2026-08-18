@@ -17,11 +17,14 @@ object ApiHelper {
         Thread {
             try {
                 val url = URL(serverUrl)
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json; utf-8")
-                connection.setRequestProperty("Accept", "application/json")
-                connection.doOutput = true
+                val connection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json; utf-8")
+                    setRequestProperty("Accept", "application/json")
+                    connectTimeout = 10000 // 10 seconds connection timeout
+                    readTimeout = 15000    // 15 seconds read timeout
+                    doOutput = true
+                }
 
                 // Backend app.py "message" aur dynamic "is_live" key expect karta hai
                 val jsonInput = JSONObject().apply {
