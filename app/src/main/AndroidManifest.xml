@@ -37,6 +37,16 @@
     <!-- Hardware Feature Declarations -->
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
+    <!-- IMPORTANT: Queries for Android 11+ to ensure TTS and Speech Recognizer work flawlessly -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/ic_menu_camera"
@@ -80,11 +90,16 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Floating Overlay Widget Service with Foreground Service Type -->
+        <!-- Floating Overlay Widget Service with Foreground Service Type & Android 14 Fix -->
         <service
             android:name=".FloatingWidgetService"
             android:foregroundServiceType="specialUse"
-            android:exported="false" />
+            android:exported="false">
+            <!-- REQUIRED FOR ANDROID 14+: Explains the special use to the system -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Screen casting and AI assistant overlay" />
+        </service>
 
     </application>
 </manifest>
