@@ -1,160 +1,189 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0f172a"> <!-- Dark Blue/Black theme from your video -->
+    android:background="#0A0E1A"
+    android:padding="16dp">
 
-    <!-- Header -->
+    <!-- Top Header Layout -->
     <LinearLayout
-        android:id="@+id/header"
-        android:layout_width="match_parent"
+        android:id="@+id/headerLayout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:padding="16dp"
+        android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
-        
-        <View
-            android:layout_width="12dp"
-            android:layout_height="12dp"
-            android:background="@android:drawable/presence_online" />
-            
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Saara AI "
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
+            android:text="Saara AI"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
             android:textStyle="bold" />
-            
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="NATIVE"
-            android:background="#3300FFAA"
-            android:textColor="#00FFAA"
             android:textSize="10sp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:layout_marginStart="4dp"/>
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:background="@drawable/badge_background"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:layout_marginStart="8dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Status Layout -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/green_dot"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="System Assistant Active"
+                android:textColor="#9CA3AF"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- Center Orb Animation Placeholder -->
-    <ImageView
-        android:id="@+id/orbImage"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:layout_below="@id/header"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:src="@android:drawable/ic_dialog_dialer" 
-        android:alpha="0.7"
-        android:tint="#00FFAA" /> <!-- Aap baad me isme apna gol chakkar wala GIF laga sakte hain -->
+    <!-- Glowing Orb / Sphere -->
+    <View
+        android:id="@+id/glowingOrb"
+        android:layout_width="110dp"
+        android:layout_height="110dp"
+        android:background="@drawable/glowing_orb"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Chat Area (Now with Bubbles) -->
+    <!-- Chat Messages ScrollView -->
     <ScrollView
-        android:id="@+id/chatScroll"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_below="@id/orbImage"
-        android:layout_above="@id/actionButtonsLayout"
-        android:padding="16dp"
-        android:fillViewport="true">
+        android:id="@+id/chatScrollContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintTop_toBottomOf="@id/glowingOrb"
+        app:layout_constraintBottom_toTopOf="@id/actionButtonsLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:id="@+id/chatContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:orientation="vertical">
+            <!-- Chat Bubbles yahan dynamically add honge -->
+        </LinearLayout>
     </ScrollView>
 
-    <!-- 3 Action Buttons (From your video) -->
+    <!-- Bottom Action Buttons -->
     <LinearLayout
         android:id="@+id/actionButtonsLayout"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_above="@id/bottomLayout"
         android:orientation="horizontal"
-        android:padding="8dp"
-        android:gravity="center"
-        android:background="#1e293b">
+        android:weightSum="3"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintBottom_toTopOf="@id/inputBarLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <Button
             android:id="@+id/btnCastScreen"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
             android:layout_weight="1"
             android:text="Cast Screen"
             android:textSize="12sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#334155" />
+            android:backgroundTint="#162032"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="6dp" />
 
         <Button
             android:id="@+id/btnQuickChat"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
             android:layout_weight="1"
             android:text="Quick Chat"
             android:textSize="12sp"
-            android:layout_marginStart="4dp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#334155" />
+            android:backgroundTint="#162032"
+            android:textColor="@android:color/white"
+            android:layout_marginHorizontal="3dp" />
 
         <Button
             android:id="@+id/btnLiveVoice"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
             android:layout_weight="1"
             android:text="Live Voice"
             android:textSize="12sp"
-            android:layout_marginStart="4dp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#334155" />
+            android:backgroundTint="#162032"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="6dp" />
     </LinearLayout>
 
-    <!-- Bottom Input Area -->
+    <!-- Bottom Input Bar -->
     <LinearLayout
-        android:id="@+id/bottomLayout"
-        android:layout_width="match_parent"
+        android:id="@+id/inputBarLayout"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="#0f172a"
-        android:padding="12dp"
+        android:orientation="horizontal"
+        android:background="#131B2E"
+        android:padding="6dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <EditText
-            android:id="@+id/etInput"
+            android:id="@+id/etMessageInput"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@android:drawable/editbox_background"
-            android:backgroundTint="#1e293b"
             android:hint="Ask Saara or give a command..."
-            android:textColorHint="#888888"
-            android:textColor="#FFFFFF"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp" />
+            android:textColorHint="#6B7280"
+            android:textColor="@android:color/white"
+            android:background="@android:color/transparent"
+            android:padding="10dp"
+            android:textSize="14sp" />
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btnMic"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:src="@android:drawable/ic_btn_speak_now"
-            android:scaleType="centerInside"
-            android:backgroundTint="#8b5cf6" /> <!-- Purple mic like your video -->
+            android:padding="8dp"
+            app:tint="@android:color/white" />
 
-        <ImageButton
+        <ImageView
             android:id="@+id/btnSend"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
             android:src="@android:drawable/ic_menu_send"
-            android:scaleType="centerInside"
-            android:backgroundTint="#00FFAA" />
+            android:padding="8dp"
+            app:tint="@android:color/white"
+            android:layout_marginStart="4dp" />
     </LinearLayout>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
