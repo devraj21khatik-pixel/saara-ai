@@ -90,7 +90,7 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Floating Overlay Widget Service with Foreground Service Type & Android 14 Fix -->
+        <!-- Floating Widget Service with Foreground Service Type & Android 14 Fix -->
         <service
             android:name=".FloatingWidgetService"
             android:foregroundServiceType="specialUse"
@@ -100,6 +100,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Screen casting and AI assistant overlay" />
         </service>
+
+        <!-- Saara Floating Bubble Service -->
+        <service
+            android:name=".SaaraFloatingService"
+            android:exported="false" />
 
     </application>
 </manifest>
