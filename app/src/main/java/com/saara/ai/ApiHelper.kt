@@ -1,62 +1,46 @@
 package com.saara.ai
 
-import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-object ApiHelper {
-    fun sendQueryToBackend(
-        serverUrl: String, 
-        prompt: String, 
-        isLive: Boolean = false, 
-        callback: (String) -> Unit
-    ) {
-        Thread {
-            try {
-                val url = URL(serverUrl)
-                val connection = (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    setRequestProperty("Content-Type", "application/json; utf-8")
-                    setRequestProperty("Accept", "application/json")
-                    connectTimeout = 10000 // 10 seconds connection timeout
-                    readTimeout = 15000    // 15 seconds read timeout
-                    doOutput = true
-                }
+class ApiHelper {
 
-                // Backend app.py "message" aur dynamic "is_live" key expect karta hai
-                val jsonInput = JSONObject().apply {
-                    put("message", prompt)
-                    put("is_live", isLive)
-                }
-                
-                connection.outputStream.use { os ->
-                    val input = jsonInput.toString().toByteArray(Charsets.UTF_8)
-                    os.write(input, 0, input.size)
-                }
+    // Network request strictly runs off the UI thread (Dispatchers.IO)
+    suspend fun sendQueryToBackend(userQuery: String, serverUrl: String): String = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(serverUrl)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.connectTimeout = 8000 // 8 second timeout
+            conn.readTimeout = 8000
 
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val br = BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8))
-                    val response = StringBuilder()
-                    var responseLine: String?
-                    while (br.readLine().also { responseLine = it } != null) {
-                        response.append(responseLine?.trim())
-                    }
-                    
-                    // JSON Response parse karke clean 'reply' extract karna
-                    val jsonResponse = JSONObject(response.toString())
-                    val reply = jsonResponse.optString("reply", "No response from Saara")
-                    callback(reply)
-                } else {
-                    callback("Error: Server returned HTTP code $responseCode")
-                }
-            } catch (e: Exception) {
-                Log.e("ApiHelper", "Exception during API call", e)
-                callback("Error: ${e.localizedMessage}")
+            // Request Payload
+            val jsonInput = JSONObject().apply {
+                put("query", userQuery)
             }
-        }.start()
+
+            val writer = OutputStreamWriter(conn.outputStream)
+            writer.write(jsonInput.toString())
+            writer.flush()
+            writer.close()
+
+            // Response handling
+            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+                val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonResponse = JSONObject(responseText)
+                return@withContext jsonResponse.optString("reply", "Response processed.")
+            } else {
+                return@withContext "Server error (${conn.responseCode})"
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext "Network delay, trying again..."
+        }
     }
 }
