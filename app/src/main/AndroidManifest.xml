@@ -1,83 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    package="com.saara.ai">
 
-    <!-- Network Permissions -->
+    <!-- Network & Internet Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <!-- Mic & Audio Permissions -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-
-    <!-- Notification Permission (Android 13+ / API 33) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- System Overlay & Foreground Services (Android 14+ Compatibility) -->
+    
+    <!-- Floating Overlay Permission -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Background Foreground Service Permission -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
-    <!-- Bluetooth Permissions (Legacy & Android 12+ Support) -->
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        tools:targetApi="31"
-        android:usesPermissionFlags="neverForLocation" />
-
-    <!-- Contacts, Call & Message Automations -->
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.CALL_PHONE" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- Hardware Feature Declarations -->
-    <uses-feature android:name="android.hardware.microphone" android:required="false" />
-
-    <!-- IMPORTANT: Queries for Android 11+ to ensure TTS and Speech Recognizer work flawlessly -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.TTS_SERVICE" />
-        </intent>
-        <intent>
-            <action android:name="android.speech.RecognitionService" />
-        </intent>
-    </queries>
+    
+    <!-- Installed Apps Query Permission (App Open Automation Ke Liye) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" 
+        xmlns:tools="http://schemas.android.com/tools"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
         android:allowBackup="true"
-        android:icon="@android:drawable/ic_menu_camera"
+        android:icon="@mipmap/ic_launcher"
         android:label="Saara AI"
-        android:roundIcon="@android:drawable/ic_menu_camera"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
 
-        <!-- Main Activity with Keyboard Soft Input Fix -->
+        <!-- Main Launcher Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Notification Service -->
+        <!-- Floating UI Background Service -->
         <service
-            android:name=".SaaraNotificationService"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+            android:name=".SaaraFloatingService"
+            android:enabled="true"
+            android:exported="false" />
 
-        <!-- Accessibility Service -->
+        <!-- Automation & System Action Accessibility Service -->
         <service
             android:name=".SaaraAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -90,21 +53,6 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- Floating Widget Service with Foreground Service Type & Android 14 Fix -->
-        <service
-            android:name=".FloatingWidgetService"
-            android:foregroundServiceType="specialUse"
-            android:exported="false">
-            <!-- REQUIRED FOR ANDROID 14+: Explains the special use to the system -->
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Screen casting and AI assistant overlay" />
-        </service>
-
-        <!-- Saara Floating Bubble Service -->
-        <service
-            android:name=".SaaraFloatingService"
-            android:exported="false" />
-
     </application>
+
 </manifest>
