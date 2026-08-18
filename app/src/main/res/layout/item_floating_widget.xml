@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/sleek_bottom_bar"
+    android:orientation="horizontal"
+    android:paddingHorizontal="20dp"
+    android:paddingVertical="12dp"
+    android:gravity="center_vertical"
+    android:elevation="12dp">
+
+    <!-- Glowing AI Orb -->
+    <ImageView
+        android:id="@+id/orbIcon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@drawable/glowing_orb" />
+
+    <!-- Live Status Text -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:text="Saara is listening..."
+        android:textColor="#F3F4F6"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium" />
+
+</LinearLayout>
