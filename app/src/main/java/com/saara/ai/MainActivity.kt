@@ -2,10 +2,12 @@ package com.saara.ai
 
 import android.Manifest
 import android.app.SearchManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -29,11 +31,16 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     private lateinit var chatContainer: LinearLayout
     private lateinit var etInput: EditText
-    private lateinit var btnMic: ImageButton
-    private lateinit var btnSend: ImageButton
+    private lateinit var btnMic: ImageView
+    private lateinit var btnSend: ImageView
     private lateinit var chatScroll: ScrollView
     
-    // Naye Action Buttons
+    // Screen Cast / Media Projection Variables
+    private lateinit var mediaProjectionManager: MediaProjectionManager
+    private val SCREEN_CAPTURE_REQUEST_CODE = 1005
+    private val OVERLAY_PERMISSION_CODE = 2084
+    
+    // Action Buttons
     private lateinit var btnCastScreen: Button
     private lateinit var btnQuickChat: Button
     private lateinit var btnLiveVoice: Button
@@ -41,19 +48,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     private var speechRecognizer: SpeechRecognizer? = null
     private var textToSpeech: TextToSpeech? = null
     private var isLiveVoiceMode = false
-    
-    private val OVERLAY_PERMISSION_CODE = 2084
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 1. Initialize UI Elements
+        // Initialize Media Projection Manager for Gemini Live style Screen Share
+        mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+
+        // 1. Initialize UI Elements (Matching activity_main.xml IDs)
         chatContainer = findViewById(R.id.chatContainer)
-        etInput = findViewById(R.id.etInput)
+        etInput = findViewById(R.id.etMessageInput)
         btnMic = findViewById(R.id.btnMic)
         btnSend = findViewById(R.id.btnSend)
-        chatScroll = findViewById(R.id.chatScroll)
+        chatScroll = findViewById(R.id.chatScrollContainer)
         
         btnCastScreen = findViewById(R.id.btnCastScreen)
         btnQuickChat = findViewById(R.id.btnQuickChat)
@@ -69,12 +77,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         // 4. Button Clicks
         btnCastScreen.setOnClickListener {
-            addChatBubble("Screen Cast settings khol rahi hoon Sir...", false)
-            speakOut("Screen Cast settings khol rahi hoon Sir")
-            openScreenCast()
+            addChatBubble("Screen share access start kar rahi hoon Sir...", false)
+            speakOut("Screen share access ke liye permission dijiye.")
+            val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+            startActivityForResult(captureIntent, SCREEN_CAPTURE_REQUEST_CODE)
         }
 
-        // Quick Chat button ab Floating Bubble trigger karega
         btnQuickChat.setOnClickListener {
             checkOverlayPermissionAndStart()
         }
@@ -82,20 +90,20 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         btnLiveVoice.setOnClickListener {
             isLiveVoiceMode = !isLiveVoiceMode
             if (isLiveVoiceMode) {
-                btnLiveVoice.setBackgroundColor(Color.parseColor("#8b5cf6")) // Active Color
+                btnLiveVoice.setBackgroundColor(Color.parseColor("#8b5cf6")) 
                 addChatBubble("Live Voice Mode ON. Ab main lagatar sun rahi hoon.", false)
                 speakOut("Live Voice Mode ON.")
                 startVoiceRecognition()
             } else {
-                btnLiveVoice.setBackgroundColor(Color.parseColor("#334155")) // Normal Color
+                btnLiveVoice.setBackgroundColor(Color.parseColor("#162032")) 
                 addChatBubble("Live Voice Mode OFF.", false)
                 speakOut("Live Voice Mode OFF kar diya hai.")
             }
         }
 
         btnMic.setOnClickListener { 
-            isLiveVoiceMode = false // Normal mic click disables live mode
-            btnLiveVoice.setBackgroundColor(Color.parseColor("#334155"))
+            isLiveVoiceMode = false 
+            btnLiveVoice.setBackgroundColor(Color.parseColor("#162032"))
             startVoiceRecognition() 
         }
 
@@ -109,7 +117,29 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // --- FLOATING OVERLAY PERMISSION & START LOGIC ---
+    // --- FLOATING OVERLAY & SCREEN CAPTURE PERMISSION RESULTS ---
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (requestCode == SCREEN_CAPTURE_REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                addChatBubble("Screen access mil gaya! Ab main screen dekh sakti hoon.", false)
+                speakOut("Screen access mil gaya hai.")
+                // Yahan aap apna screen projection/capturing service start kar sakte hain
+            } else {
+                addChatBubble("Screen access permission cancel kar di gayi.", false)
+                speakOut("Screen access cancel ho gaya.")
+            }
+        } else if (requestCode == OVERLAY_PERMISSION_CODE) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
+                startService(Intent(this, SaaraFloatingService::class.java))
+                addChatBubble("Floating Saara active ho gayi hai!", false)
+            } else {
+                Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun checkOverlayPermissionAndStart() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
@@ -119,18 +149,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             startService(Intent(this, SaaraFloatingService::class.java))
             addChatBubble("Floating Saara active ho gayi hai!", false)
             speakOut("Floating Saara active ho gayi hai.")
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == OVERLAY_PERMISSION_CODE) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(this)) {
-                startService(Intent(this, SaaraFloatingService::class.java))
-                addChatBubble("Floating Saara active ho gayi hai!", false)
-            } else {
-                Toast.makeText(this, "Permission Denied", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
@@ -153,7 +171,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val shape = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 30f
-            setColor(if (isUser) Color.parseColor("#475569") else Color.parseColor("#3b2667"))
+            setColor(if (isUser) Color.parseColor("#3B49DF") else Color.parseColor("#1E293B"))
         }
         textView.background = shape
 
@@ -180,9 +198,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() { etInput.hint = "Ask Saara..." }
+                override fun onEndOfSpeech() { etInput.hint = "Ask Saara or give a command..." }
                 override fun onError(error: Int) { 
-                    etInput.hint = "Ask Saara..." 
+                    etInput.hint = "Ask Saara or give a command..." 
                     if (isLiveVoiceMode) etInput.postDelayed({ startVoiceRecognition() }, 1000)
                 }
                 override fun onResults(results: Bundle?) {
@@ -220,11 +238,12 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         val lowerQuery = query.lowercase()
 
         when {
-            // 1. SCREENCAST
+            // 1. SCREENCAST / SCREEN SHARE
             lowerQuery.contains("screencast") || lowerQuery.contains("cast screen") -> {
-                addChatBubble("Screen cast khol rahi hoon Sir.", false)
-                speakOut("Screen cast khol rahi hoon Sir.")
-                openScreenCast()
+                addChatBubble("Screen share access shuru kar rahi hoon Sir.", false)
+                speakOut("Screen share access shuru kar rahi hoon.")
+                val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+                startActivityForResult(captureIntent, SCREEN_CAPTURE_REQUEST_CODE)
                 restartLiveVoiceIfNeeded()
             }
             
@@ -264,7 +283,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 restartLiveVoiceIfNeeded()
             }
 
-            // 6. WHATSAPP (Basic NLP)
+            // 6. WHATSAPP MESSAGE
             lowerQuery.contains("whatsapp") && lowerQuery.contains("message") -> {
                 val target = lowerQuery.substringAfter("whatsapp par").substringBefore("ko").trim()
                 val msg = lowerQuery.substringAfter("message bhejo").trim()
@@ -291,7 +310,7 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                         runOnUiThread {
                             addChatBubble(reply, false)
                             speakOut(reply)
-                            restartLiveVoiceIfNeeded(reply.length * 100L) // Wait for AI to finish speaking
+                            restartLiveVoiceIfNeeded(reply.length * 100L) 
                         }
                     }
                 } catch (e: Exception) {
@@ -304,7 +323,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // Helper function for Live Voice loop
     private fun restartLiveVoiceIfNeeded(delay: Long = 2000L) {
         if (isLiveVoiceMode) {
             etInput.postDelayed({ startVoiceRecognition() }, delay)
@@ -312,16 +330,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     // --- APP AUTOMATION FUNCTIONS ---
-
-    private fun openScreenCast() {
-        try {
-            startActivity(Intent("android.settings.CAST_SETTINGS").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-        } catch (e: Exception) {
-            try {
-                startActivity(Intent("android.settings.WIFI_DISPLAY_SETTINGS").apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
-            } catch (ex: Exception) { Toast.makeText(this, "Screen Cast settings not found", Toast.LENGTH_SHORT).show() }
-        }
-    }
 
     private fun searchOnGoogle(query: String) {
         try {
