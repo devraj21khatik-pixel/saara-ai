@@ -13,7 +13,7 @@ class MainActivity : AppCompatActivity() {
     private val OVERLAY_PERMISSION_REQ_CODE = 1234
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate()
+        super.onCreate(savedInstanceState) // Fixed parameter here
         setContentView(R.layout.activity_main)
 
         // Check if Floating Window (Overlay) permission is granted
