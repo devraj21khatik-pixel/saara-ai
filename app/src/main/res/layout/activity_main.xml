@@ -2,45 +2,115 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0A">
+    android:background="#0f172a"> <!-- Dark Blue/Black theme from your video -->
 
     <!-- Header -->
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#1A1A1A"
         android:padding="16dp"
-        android:elevation="4dp"
-        android:gravity="center">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        
+        <View
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@android:drawable/presence_online" />
+            
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Saara AI - Native"
-            android:textColor="#00FFAA"
-            android:textSize="20sp"
+            android:layout_marginStart="8dp"
+            android:text="Saara AI "
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
             android:textStyle="bold" />
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NATIVE"
+            android:background="#3300FFAA"
+            android:textColor="#00FFAA"
+            android:textSize="10sp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-    <!-- Chat/Response Area -->
+    <!-- Center Orb Animation Placeholder -->
+    <ImageView
+        android:id="@+id/orbImage"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_below="@id/header"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:src="@android:drawable/ic_dialog_dialer" 
+        android:alpha="0.7"
+        android:tint="#00FFAA" /> <!-- Aap baad me isme apna gol chakkar wala GIF laga sakte hain -->
+
+    <!-- Chat Area (Now with Bubbles) -->
     <ScrollView
         android:id="@+id/chatScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/header"
-        android:layout_above="@id/bottomLayout"
+        android:layout_below="@id/orbImage"
+        android:layout_above="@id/actionButtonsLayout"
         android:padding="16dp"
         android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/tvResponse"
+        <LinearLayout
+            android:id="@+id/chatContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Namaste Sir! Main Saara hoon. Bataiye main aapki kya madad kar sakti hoon?"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:lineSpacingExtra="6dp" />
+            android:orientation="vertical" />
     </ScrollView>
+
+    <!-- 3 Action Buttons (From your video) -->
+    <LinearLayout
+        android:id="@+id/actionButtonsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottomLayout"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center"
+        android:background="#1e293b">
+
+        <Button
+            android:id="@+id/btnCastScreen"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Cast Screen"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#334155" />
+
+        <Button
+            android:id="@+id/btnQuickChat"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Quick Chat"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#334155" />
+
+        <Button
+            android:id="@+id/btnLiveVoice"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:text="Live Voice"
+            android:textSize="12sp"
+            android:layout_marginStart="4dp"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#334155" />
+    </LinearLayout>
 
     <!-- Bottom Input Area -->
     <LinearLayout
@@ -48,7 +118,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:background="#1A1A1A"
+        android:background="#0f172a"
         android:padding="12dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
@@ -59,8 +129,8 @@
             android:layout_height="50dp"
             android:layout_weight="1"
             android:background="@android:drawable/editbox_background"
-            android:backgroundTint="#333333"
-            android:hint="Message likhein..."
+            android:backgroundTint="#1e293b"
+            android:hint="Ask Saara or give a command..."
             android:textColorHint="#888888"
             android:textColor="#FFFFFF"
             android:paddingStart="16dp"
@@ -74,15 +144,16 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_btn_speak_now"
             android:scaleType="centerInside"
-            android:backgroundTint="#00FFAA" />
+            android:backgroundTint="#8b5cf6" /> <!-- Purple mic like your video -->
 
-        <Button
+        <ImageButton
             android:id="@+id/btnSend"
-            android:layout_width="wrap_content"
+            android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_marginStart="8dp"
-            android:text="Send"
-            android:textColor="#000000"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_send"
+            android:scaleType="centerInside"
             android:backgroundTint="#00FFAA" />
     </LinearLayout>
 
