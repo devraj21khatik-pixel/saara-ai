@@ -14,6 +14,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.util.Log  // <-- Ye line chhut gayi thi pichli baar!
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -127,10 +128,10 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             checkAndRequestPermissions()
             return
         }
-        textToSpeech?.stop() // Stop speaking if user taps mic
+        textToSpeech?.stop() 
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN") // Default to Hindi-India
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Boliye Sir...")
         }
         speechRecognizer?.startListening(intent)
@@ -138,10 +139,9 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            // Using default TTS model, no changes to your AI logic
             val result = textToSpeech?.setLanguage(Locale("hi", "IN"))
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e("TTS", "Language not supported")
+                Log.e("TTS", "Language not supported") 
             }
         }
     }
@@ -156,7 +156,6 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         chatScroll.post { chatScroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
-    // ---------------- LOGIC ROUTING ----------------
     private fun processQuery(query: String) {
         val lowerQuery = query.lowercase()
 
@@ -191,25 +190,31 @@ class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                 makeCall(target)
             }
             else -> {
-                // Backend call (App.py AI Logic remains exactly the same)
                 appendChat("Saara: (Thinking...)")
                 val serverUrl = "https://saara-ai-lac.vercel.app/chat"
-                ApiHelper.sendQueryToBackend(serverUrl, query, isLive = false) { reply ->
+                try {
+                    ApiHelper.sendQueryToBackend(serverUrl, query, isLive = false) { reply ->
+                        runOnUiThread {
+                            val lastIndex = chatHistory.lastIndexOf("Saara: (Thinking...)")
+                            if (lastIndex != -1) {
+                                chatHistory.delete(lastIndex, chatHistory.length)
+                            }
+                            appendChat("Saara: $reply")
+                            speakOut(reply)
+                        }
+                    }
+                } catch (e: Exception) {
                     runOnUiThread {
-                        // Remove "Thinking..." and append real response
                         val lastIndex = chatHistory.lastIndexOf("Saara: (Thinking...)")
                         if (lastIndex != -1) {
                             chatHistory.delete(lastIndex, chatHistory.length)
                         }
-                        appendChat("Saara: $reply")
-                        speakOut(reply)
+                        appendChat("Saara: Api Error: ${e.message}")
                     }
                 }
             }
         }
     }
-
-    // ---------------- NATIVE SYSTEM INTENTS ----------------
 
     private fun openScreenCast() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
